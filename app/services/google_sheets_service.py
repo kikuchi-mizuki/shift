@@ -1,4 +1,5 @@
 import os
+import json
 from typing import List, Dict, Optional, Tuple, Any
 from datetime import datetime, date
 from google.oauth2.service_account import Credentials
@@ -23,11 +24,11 @@ class GoogleSheetsService:
     def _initialize_service(self):
         """Google Sheets APIサービスの初期化"""
         try:
-            # サービスアカウントキーから認証情報を取得
-            creds = Credentials.from_service_account_file(
-                settings.google_sheets_credentials_file,
-                scopes=['https://www.googleapis.com/auth/spreadsheets']
-            )
+            credentials_json = os.environ.get("GOOGLE_SHEETS_CREDENTIALS_JSON")
+            if credentials_json:
+                creds = Credentials.from_service_account_info(json.loads(credentials_json))
+            else:
+                creds = Credentials.from_service_account_file("credentials.json")
             
             self.service = build('sheets', 'v4', credentials=creds)
             logger.info("Google Sheets API service initialized successfully")
