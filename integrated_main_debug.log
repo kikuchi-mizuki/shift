@@ -1,0 +1,66 @@
+INFO:     Started server process [34439]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
+2025-07-05 10:04:19,735 - app.api.line_webhook - INFO - Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: 店舗登録 001 メイプル薬局
+2025-07-05 10:04:19,736 - app.services.user_management_service - INFO - Created new session for user U37da00c3f064eb4acc037aa8ec6ea79e (type: unknown)
+2025-07-05 10:04:19,736 - app.api.line_webhook - INFO - User U37da00c3f064eb4acc037aa8ec6ea79e type: unknown
+2025-07-05 10:04:19,736 - app.api.line_webhook - INFO - Attempting to register store: number=001, name=メイプル薬局, user_id=U37da00c3f064eb4acc037aa8ec6ea79e
+2025-07-05 10:04:20,441 - app.services.google_sheets_service - INFO - Found 1 stores in sheet 店舗登録
+2025-07-05 10:04:20,441 - app.services.google_sheets_service - INFO - Found 1 stores in sheet 店舗登録
+2025-07-05 10:04:20,441 - app.services.google_sheets_service - INFO - Store 1: number='002', name='サンライズ薬局'
+2025-07-05 10:04:20,442 - app.services.google_sheets_service - WARNING - Store not found for number=001, name=メイプル薬局 in sheet 店舗登録
+2025-07-05 10:04:20,442 - app.api.line_webhook - WARNING - Failed to register store user_id for 001 メイプル薬局
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+2025-07-05 10:05:15,550 - app.api.line_webhook - INFO - Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: 店舗登録 002 サンライズ薬局
+2025-07-05 10:05:15,551 - app.api.line_webhook - INFO - User U37da00c3f064eb4acc037aa8ec6ea79e type: unknown
+2025-07-05 10:05:15,551 - app.api.line_webhook - INFO - Attempting to register store: number=002, name=サンライズ薬局, user_id=U37da00c3f064eb4acc037aa8ec6ea79e
+2025-07-05 10:05:16,091 - app.services.google_sheets_service - INFO - Found 1 stores in sheet 店舗登録
+2025-07-05 10:05:16,091 - app.services.google_sheets_service - INFO - Found 1 stores in sheet 店舗登録
+2025-07-05 10:05:16,091 - app.services.google_sheets_service - INFO - Store 1: number='002', name='サンライズ薬局'
+2025-07-05 10:05:16,440 - app.services.google_sheets_service - INFO - Registered user_id for store サンライズ薬局 (002) at row 2: U37da00c3f064eb4acc037aa8ec6ea79e
+2025-07-05 10:05:16,441 - app.services.user_management_service - INFO - Set user type for U37da00c3f064eb4acc037aa8ec6ea79e: store
+2025-07-05 10:05:16,441 - app.api.line_webhook - INFO - Successfully registered store user_id for 002 サンライズ薬局
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+2025-07-05 10:06:21,367 - app.api.line_webhook - INFO - Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: 勤務依頼
+2025-07-05 10:06:21,367 - app.api.line_webhook - INFO - User U37da00c3f064eb4acc037aa8ec6ea79e type: store
+2025-07-05 10:06:21,367 - app.api.line_webhook - INFO - [handle_shift_request] called by user_id=U37da00c3f064eb4acc037aa8ec6ea79e, user_type=UserType.STORE
+2025-07-05 10:06:21,367 - app.api.line_webhook - INFO - [handle_shift_request] parse_shift_request failed for user_id=U37da00c3f064eb4acc037aa8ec6ea79e, message_text=勤務依頼
+[handle_shift_request] called
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+2025-07-05 10:07:38,456 - app.api.line_webhook - INFO - Received postback from U37da00c3f064eb4acc037aa8ec6ea79e: select_date
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+2025-07-05 10:07:39,758 - app.api.line_webhook - INFO - Received postback from U37da00c3f064eb4acc037aa8ec6ea79e: date_today
+2025-07-05 10:07:39,758 - app.api.line_webhook - INFO - Saved date for user U37da00c3f064eb4acc037aa8ec6ea79e: 2025-07-05
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+2025-07-05 10:07:41,218 - app.api.line_webhook - INFO - Received postback from U37da00c3f064eb4acc037aa8ec6ea79e: time_morning
+2025-07-05 10:07:41,219 - app.api.line_webhook - INFO - Saved time for user U37da00c3f064eb4acc037aa8ec6ea79e: 午前 (9:00-13:00)
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+2025-07-05 10:07:42,687 - app.api.line_webhook - INFO - Received postback from U37da00c3f064eb4acc037aa8ec6ea79e: count_1
+2025-07-05 10:07:42,687 - app.api.line_webhook - INFO - Saved count for user U37da00c3f064eb4acc037aa8ec6ea79e: 1名
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+2025-07-05 10:07:46,246 - app.api.line_webhook - INFO - Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: はい
+2025-07-05 10:07:46,246 - app.api.line_webhook - INFO - User U37da00c3f064eb4acc037aa8ec6ea79e type: store
+2025-07-05 10:07:46,246 - app.api.line_webhook - INFO - Confirmed request req_U37da00c3f064eb4acc037aa8ec6ea79e_20250705_100746 for user U37da00c3f064eb4acc037aa8ec6ea79e: {'date': datetime.date(2025, 7, 5), 'date_text': '今日', 'time': 'time_morning', 'time_text': '午前 (9:00-13:00)', 'count': 'count_1', 'count_text': '1名'}
+2025-07-05 10:07:46,743 - app.services.google_sheets_service - INFO - Found 3 pharmacists in sheet 2025-07
+2025-07-05 10:07:47,035 - app.services.google_sheets_service - INFO - Found 3 available pharmacists for 2025-07-05 time_morning
+2025-07-05 10:07:47,119 - app.services.pharmacist_notification_service - ERROR - Error sending notification to pharmacist 田中薬剤師: LineBotApiError: status_code=400, request_id=638a3166-f913-414e-85c1-bdd2bcf8521d, error_response={"details": [], "message": "Failed to send messages"}, headers={'server': 'legy', 'cache-control': 'no-cache, no-store, max-age=0, must-revalidate', 'content-type': 'application/json', 'date': 'Sat, 05 Jul 2025 01:07:46 GMT', 'expires': '0', 'pragma': 'no-cache', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '638a3166-f913-414e-85c1-bdd2bcf8521d', 'x-xss-protection': '1; mode=block', 'content-length': '37'}
+2025-07-05 10:07:47,120 - app.services.pharmacist_notification_service - ERROR - Failed to notify pharmacist: 田中薬剤師
+2025-07-05 10:07:47,120 - app.services.pharmacist_notification_service - INFO - Skipping notification for pharmacist 佐藤薬剤師 (invalid user ID format: Uabcdef1234567890)
+2025-07-05 10:07:47,120 - app.services.pharmacist_notification_service - INFO - Successfully notified pharmacist: 佐藤薬剤師
+2025-07-05 10:07:47,120 - app.services.pharmacist_notification_service - INFO - Skipping notification for pharmacist 鈴木薬剤師 (invalid user ID format: U7890abcdef123456)
+2025-07-05 10:07:47,120 - app.services.pharmacist_notification_service - INFO - Successfully notified pharmacist: 鈴木薬剤師
+2025-07-05 10:07:47,120 - app.services.pharmacist_notification_service - INFO - Notification completed: {'total_pharmacists': 3, 'notified_count': 2, 'failed_count': 1, 'failed_pharmacists': [{'name': '田中薬剤師', 'reason': 'Notification failed'}]}
+2025-07-05 10:07:47,120 - app.services.pharmacist_notification_service - INFO - ✅ Successfully notified 2 pharmacists
+2025-07-05 10:07:47,120 - app.services.pharmacist_notification_service - INFO - ⚠️  Skipped 1 pharmacists (development mode)
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+2025-07-05 10:26:32,327 - app.api.line_webhook - INFO - Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: 勤務依頼
+2025-07-05 10:26:32,327 - app.api.line_webhook - INFO - User U37da00c3f064eb4acc037aa8ec6ea79e type: store
+2025-07-05 10:26:32,327 - app.api.line_webhook - INFO - [handle_shift_request] called by user_id=U37da00c3f064eb4acc037aa8ec6ea79e, user_type=UserType.STORE
+2025-07-05 10:26:32,327 - app.api.line_webhook - INFO - [handle_shift_request] parse_shift_request failed for user_id=U37da00c3f064eb4acc037aa8ec6ea79e, message_text=勤務依頼
+[handle_shift_request] called
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [34439]

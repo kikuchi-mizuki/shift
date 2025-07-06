@@ -1,0 +1,8 @@
+version: "2"
+tunnels:
+  store-bot:
+    addr: 5000
+    proto: http
+  pharmacist-bot:
+    addr: 8002
+    proto: http 

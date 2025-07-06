@@ -1,0 +1,118 @@
+INFO:     Started server process [27191]
+2025-07-05 07:47:33,642 INFO uvicorn.error Started server process [27191]
+INFO:     Waiting for application startup.
+2025-07-05 07:47:33,642 INFO uvicorn.error Waiting for application startup.
+INFO:     Application startup complete.
+2025-07-05 07:47:33,642 INFO uvicorn.error Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
+2025-07-05 07:47:33,643 INFO uvicorn.error Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+2025-07-05 07:47:52,540 INFO uvicorn.access 147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+2025-07-05 07:48:37,684 INFO uvicorn.access 147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+2025-07-05 07:51:10,787 INFO uvicorn.access 147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+INFO:     147.92.149.165:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+2025-07-05 07:52:05,571 INFO uvicorn.access 147.92.149.165:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+2025-07-05 07:54:37,636 ERROR app.api.line_webhook Invalid signature
+2025-07-05 07:54:37,636 ERROR app.api.line_webhook Webhook error: 
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 500 Internal Server Error
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 500
+2025-07-05 07:54:37,636 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 500
+INFO:     147.92.149.166:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.166:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+2025-07-05 07:55:06,202 INFO uvicorn.access 147.92.149.166:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+2025-07-05 07:56:14,365 INFO uvicorn.access 147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+2025-07-05 08:00:17,312 INFO app.api.line_webhook Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: 勤務依頼
+2025-07-05 08:00:17,314 INFO app.services.user_management_service Created new session for user U37da00c3f064eb4acc037aa8ec6ea79e (type: unknown)
+2025-07-05 08:00:17,315 INFO app.api.line_webhook User U37da00c3f064eb4acc037aa8ec6ea79e type: unknown
+2025-07-05 08:00:17,315 INFO app.api.line_webhook [handle_shift_request] called by user_id=U37da00c3f064eb4acc037aa8ec6ea79e, user_type=UserType.UNKNOWN
+2025-07-05 08:00:17,315 INFO app.api.line_webhook [handle_shift_request] user_id=U37da00c3f064eb4acc037aa8ec6ea79e is UNKNOWN. Prompting registration.
+[handle_shift_request] called
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:17,430 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:22,008 INFO app.api.line_webhook Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: 店舗登録
+2025-07-05 08:00:22,009 INFO app.api.line_webhook User U37da00c3f064eb4acc037aa8ec6ea79e type: unknown
+2025-07-05 08:00:22,009 INFO app.services.user_management_service Set user type for U37da00c3f064eb4acc037aa8ec6ea79e: store
+2025-07-05 08:00:22,111 INFO app.api.line_webhook Store registration completed for user U37da00c3f064eb4acc037aa8ec6ea79e
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:22,111 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:25,896 INFO app.api.line_webhook Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: 勤務依頼
+2025-07-05 08:00:25,897 INFO app.api.line_webhook User U37da00c3f064eb4acc037aa8ec6ea79e type: store
+2025-07-05 08:00:25,897 INFO app.api.line_webhook [handle_shift_request] called by user_id=U37da00c3f064eb4acc037aa8ec6ea79e, user_type=UserType.STORE
+2025-07-05 08:00:25,898 INFO app.api.line_webhook [handle_shift_request] parse_shift_request failed for user_id=U37da00c3f064eb4acc037aa8ec6ea79e, message_text=勤務依頼
+[handle_shift_request] called
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:25,999 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:27,837 INFO app.api.line_webhook Received postback from U37da00c3f064eb4acc037aa8ec6ea79e: select_date
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:27,937 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:28,761 INFO app.api.line_webhook Received postback from U37da00c3f064eb4acc037aa8ec6ea79e: select_date
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:28,855 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:29,371 INFO app.api.line_webhook Received postback from U37da00c3f064eb4acc037aa8ec6ea79e: date_today
+2025-07-05 08:00:29,372 INFO app.api.line_webhook Saved date for user U37da00c3f064eb4acc037aa8ec6ea79e: 2025-07-05
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:29,485 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:30,154 INFO app.api.line_webhook Received postback from U37da00c3f064eb4acc037aa8ec6ea79e: date_today
+2025-07-05 08:00:30,154 INFO app.api.line_webhook Saved date for user U37da00c3f064eb4acc037aa8ec6ea79e: 2025-07-05
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:30,248 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:32,158 INFO app.api.line_webhook Received postback from U37da00c3f064eb4acc037aa8ec6ea79e: time_morning
+2025-07-05 08:00:32,158 INFO app.api.line_webhook Saved time for user U37da00c3f064eb4acc037aa8ec6ea79e: 午前 (9:00-13:00)
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:32,260 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:32,737 INFO app.api.line_webhook Received postback from U37da00c3f064eb4acc037aa8ec6ea79e: time_morning
+2025-07-05 08:00:32,737 INFO app.api.line_webhook Saved time for user U37da00c3f064eb4acc037aa8ec6ea79e: 午前 (9:00-13:00)
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:32,844 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:35,108 INFO app.api.line_webhook Received postback from U37da00c3f064eb4acc037aa8ec6ea79e: count_1
+2025-07-05 08:00:35,109 INFO app.api.line_webhook Saved count for user U37da00c3f064eb4acc037aa8ec6ea79e: 1名
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:35,198 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:38,594 INFO app.api.line_webhook Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: はい
+2025-07-05 08:00:38,594 INFO app.api.line_webhook User U37da00c3f064eb4acc037aa8ec6ea79e type: store
+2025-07-05 08:00:38,594 INFO app.api.line_webhook Confirmed request req_U37da00c3f064eb4acc037aa8ec6ea79e_20250705_080038 for user U37da00c3f064eb4acc037aa8ec6ea79e: {'date': datetime.date(2025, 7, 5), 'date_text': '今日', 'time': 'time_morning', 'time_text': '午前 (9:00-13:00)', 'count': 'count_1', 'count_text': '1名'}
+2025-07-05 08:00:39,367 INFO app.services.google_sheets_service Found 3 pharmacists in sheet 2025-07
+2025-07-05 08:00:39,601 INFO app.services.google_sheets_service Found 3 available pharmacists for 2025-07-05 time_morning
+2025-07-05 08:00:39,601 INFO app.services.pharmacist_notification_service Skipping notification for pharmacist 田中薬剤師 (invalid user ID format: U1234567890abcdef)
+2025-07-05 08:00:39,602 INFO app.services.pharmacist_notification_service Successfully notified pharmacist: 田中薬剤師
+2025-07-05 08:00:39,602 INFO app.services.pharmacist_notification_service Skipping notification for pharmacist 佐藤薬剤師 (invalid user ID format: Uabcdef1234567890)
+2025-07-05 08:00:39,602 INFO app.services.pharmacist_notification_service Successfully notified pharmacist: 佐藤薬剤師
+2025-07-05 08:00:39,602 INFO app.services.pharmacist_notification_service Skipping notification for pharmacist 鈴木薬剤師 (invalid user ID format: U7890abcdef123456)
+2025-07-05 08:00:39,602 INFO app.services.pharmacist_notification_service Successfully notified pharmacist: 鈴木薬剤師
+2025-07-05 08:00:39,602 INFO app.services.pharmacist_notification_service Notification completed: {'total_pharmacists': 3, 'notified_count': 3, 'failed_count': 0, 'failed_pharmacists': []}
+2025-07-05 08:00:39,602 INFO app.services.pharmacist_notification_service ✅ Successfully notified 3 pharmacists
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 08:00:39,692 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+2025-07-05 08:50:50,804 INFO uvicorn.access 147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+2025-07-05 08:51:22,066 INFO uvicorn.access 147.92.149.168:0 - "POST /pharmacist/line/webhook HTTP/1.1" 200
+INFO:     Shutting down
+2025-07-05 08:52:15,241 INFO uvicorn.error Shutting down
+INFO:     Waiting for application shutdown.
+2025-07-05 08:52:15,342 INFO uvicorn.error Waiting for application shutdown.
+INFO:     Application shutdown complete.
+2025-07-05 08:52:15,342 INFO uvicorn.error Application shutdown complete.
+INFO:     Finished server process [27191]
+2025-07-05 08:52:15,343 INFO uvicorn.error Finished server process [27191]

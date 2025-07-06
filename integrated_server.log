@@ -1,0 +1,56 @@
+INFO:     Started server process [32669]
+2025-07-05 09:24:59,373 INFO uvicorn.error Started server process [32669]
+INFO:     Waiting for application startup.
+2025-07-05 09:24:59,373 INFO uvicorn.error Waiting for application startup.
+INFO:     Application startup complete.
+2025-07-05 09:24:59,373 INFO uvicorn.error Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
+2025-07-05 09:24:59,374 INFO uvicorn.error Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
+2025-07-05 09:25:48,743 INFO app.api.line_webhook Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: 店舗登録 001 メイプル薬局
+2025-07-05 09:25:48,743 INFO app.services.user_management_service Created new session for user U37da00c3f064eb4acc037aa8ec6ea79e (type: unknown)
+2025-07-05 09:25:48,743 INFO app.api.line_webhook User U37da00c3f064eb4acc037aa8ec6ea79e type: unknown
+2025-07-05 09:25:48,743 INFO app.api.line_webhook Attempting to register store: number=001, name=メイプル薬局, user_id=U37da00c3f064eb4acc037aa8ec6ea79e
+2025-07-05 09:25:49,420 INFO app.services.google_sheets_service Found 3 stores in sheet 2025-07
+2025-07-05 09:25:49,420 WARNING app.services.google_sheets_service Store not found for number=001, name=メイプル薬局 in sheet 2025-07
+2025-07-05 09:25:49,420 WARNING app.api.line_webhook Failed to register store user_id for 001 メイプル薬局
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 09:25:49,515 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 09:29:41,707 INFO app.api.line_webhook Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: 店舗登録 001 メイプル薬局
+2025-07-05 09:29:41,707 INFO app.api.line_webhook User U37da00c3f064eb4acc037aa8ec6ea79e type: unknown
+2025-07-05 09:29:41,707 INFO app.api.line_webhook Attempting to register store: number=001, name=メイプル薬局, user_id=U37da00c3f064eb4acc037aa8ec6ea79e
+2025-07-05 09:29:42,213 INFO app.services.google_sheets_service Found 3 stores in sheet 2025-07
+2025-07-05 09:29:42,214 WARNING app.services.google_sheets_service Store not found for number=001, name=メイプル薬局 in sheet 2025-07
+2025-07-05 09:29:42,214 WARNING app.api.line_webhook Failed to register store user_id for 001 メイプル薬局
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 09:29:42,313 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 09:30:13,846 INFO app.api.line_webhook Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: 店舗登録 001 メイプル薬局
+2025-07-05 09:30:13,846 INFO app.api.line_webhook User U37da00c3f064eb4acc037aa8ec6ea79e type: unknown
+2025-07-05 09:30:13,846 INFO app.api.line_webhook Attempting to register store: number=001, name=メイプル薬局, user_id=U37da00c3f064eb4acc037aa8ec6ea79e
+2025-07-05 09:30:14,168 INFO app.services.google_sheets_service Found 3 stores in sheet 2025-07
+2025-07-05 09:30:14,169 WARNING app.services.google_sheets_service Store not found for number=001, name=メイプル薬局 in sheet 2025-07
+2025-07-05 09:30:14,169 WARNING app.api.line_webhook Failed to register store user_id for 001 メイプル薬局
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 09:30:14,261 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+INFO:     147.92.150.198:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.150.198:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 09:45:12,697 INFO uvicorn.access 147.92.150.198:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 09:59:50,232 INFO app.api.line_webhook Received text message from U37da00c3f064eb4acc037aa8ec6ea79e: 店舗登録 001 メイプル薬局
+2025-07-05 09:59:50,233 INFO app.api.line_webhook User U37da00c3f064eb4acc037aa8ec6ea79e type: unknown
+2025-07-05 09:59:50,233 INFO app.api.line_webhook Attempting to register store: number=001, name=メイプル薬局, user_id=U37da00c3f064eb4acc037aa8ec6ea79e
+2025-07-05 09:59:50,736 INFO app.services.google_sheets_service Found 3 stores in sheet 2025-07
+2025-07-05 09:59:50,737 WARNING app.services.google_sheets_service Store not found for number=001, name=メイプル薬局 in sheet 2025-07
+2025-07-05 09:59:50,737 WARNING app.api.line_webhook Failed to register store user_id for 001 メイプル薬局
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200 OK
+INFO:     147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+2025-07-05 09:59:50,862 INFO uvicorn.access 147.92.149.165:0 - "POST /line/webhook HTTP/1.1" 200
+INFO:     Shutting down
+2025-07-05 10:00:36,352 INFO uvicorn.error Shutting down
+INFO:     Waiting for application shutdown.
+2025-07-05 10:00:36,453 INFO uvicorn.error Waiting for application shutdown.
+INFO:     Application shutdown complete.
+2025-07-05 10:00:36,454 INFO uvicorn.error Application shutdown complete.
+INFO:     Finished server process [32669]
+2025-07-05 10:00:36,454 INFO uvicorn.error Finished server process [32669]

@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # 店舗Bot
+  store-bot:
+    build: .
+    ports:
+      - "8001:8001"
+    environment:
+      - STORE_LINE_CHANNEL_ACCESS_TOKEN=${STORE_LINE_CHANNEL_ACCESS_TOKEN}
+      - STORE_LINE_CHANNEL_SECRET=${STORE_LINE_CHANNEL_SECRET}
+      - GOOGLE_SHEETS_CREDENTIALS_FILE=${GOOGLE_SHEETS_CREDENTIALS_FILE}
+      - SPREADSHEET_ID=${SPREADSHEET_ID}
+      - REDIS_URL=${REDIS_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - DEBUG=${DEBUG}
+      - ENVIRONMENT=${ENVIRONMENT}
+    volumes:
+      - ./credentials.json:/app/credentials.json
+      - ./shared:/app/shared
+    command: uvicorn store_bot.main:app --host 0.0.0.0 --port 8001 --reload
+    networks:
+      - pharmacy-network
+
+  # 薬剤師Bot
+  pharmacist-bot:
+    build: .
+    ports:
+      - "8002:8002"
+    environment:
+      - PHARMACIST_LINE_CHANNEL_ACCESS_TOKEN=${PHARMACIST_LINE_CHANNEL_ACCESS_TOKEN}
+      - PHARMACIST_LINE_CHANNEL_SECRET=${PHARMACIST_LINE_CHANNEL_SECRET}
+      - GOOGLE_SHEETS_CREDENTIALS_FILE=${GOOGLE_SHEETS_CREDENTIALS_FILE}
+      - SPREADSHEET_ID=${SPREADSHEET_ID}
+      - REDIS_URL=${REDIS_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - DEBUG=${DEBUG}
+      - ENVIRONMENT=${ENVIRONMENT}
+    volumes:
+      - ./credentials.json:/app/credentials.json
+      - ./shared:/app/shared
+    command: uvicorn pharmacist_bot.main:app --host 0.0.0.0 --port 8002 --reload
+    networks:
+      - pharmacy-network
+
+  # Redis（共有）
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pharmacy-network
+
+  # Nginx（リバースプロキシ）
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - store-bot
+      - pharmacist-bot
+    networks:
+      - pharmacy-network
+
+volumes:
+  redis_data:
+
+networks:
+  pharmacy-network:
+    driver: bridge 
