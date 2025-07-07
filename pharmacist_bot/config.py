@@ -34,7 +34,7 @@ class PharmacistBotSettings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.environment.lower() == "development"
-
+    
     class Config:
         env_file = ".env"
 
