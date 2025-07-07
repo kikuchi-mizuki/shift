@@ -17,6 +17,7 @@ from linebot.models import (
     QuickReplyButton
 )
 from dateutil.parser import parse as parse_date
+from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.services.line_bot_service import LineBotService
@@ -1911,3 +1912,9 @@ def handle_pharmacist_confirm_reject(event, postback_data):
     except Exception as e:
         logger.error(f"Error in handle_pharmacist_confirm_reject: {e}")
         line_bot_service.line_bot_api.reply_message(event.reply_token, TextSendMessage(text="見送り処理中にエラーが発生しました。"))
+
+@router.post("/webhook")
+async def debug_webhook(request: Request):
+    body = await request.body()
+    print("DEBUG: LINEから受信:", body)
+    return JSONResponse(content={"status": "ok"}, status_code=200)
