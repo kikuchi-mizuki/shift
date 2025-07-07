@@ -3,6 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
+import os
 
 from app.config import settings
 from app.api.line_webhook import router as line_webhook_router
@@ -62,9 +63,11 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 if __name__ == "__main__":
+    port = int(os.getenv("PORT", "8080"))  # RailwayのPORT環境変数を優先
+    debug = os.getenv("DEBUG", "false").lower() == "true"
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=5000,
-        reload=settings.debug
+        port=port,
+        reload=debug
     ) 
