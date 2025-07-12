@@ -164,6 +164,10 @@ def handle_unfollow(event):
 @line_bot_service.handler.add(MessageEvent, message=TextMessage)
 def handle_text_message(event):
     user_id = event.source.user_id
+    # 追加: user_id, user_typeのデバッグ出力
+    session = user_management_service.get_or_create_session(user_id)
+    user_type = session.user_type
+    print(f"[DEBUG] handle_text_message: user_id={user_id}, user_type={user_type}")
     print(f"get_temp_data check: user_id={user_id}, key=custom_date_waiting, value={user_management_service.get_temp_data(user_id, 'custom_date_waiting')}")
     # カスタム日付入力待ちの場合は最優先で処理
     if user_management_service.get_temp_data(user_id, "custom_date_waiting"):
@@ -383,17 +387,17 @@ def handle_postback(event):
 
 
 def handle_shift_request(event, message_text: str):
+    user_id = event.source.user_id
+    print(f"[DEBUG] handle_shift_request: user_id={user_id}")
+    store = get_store_by_user_id(user_id)
+    print(f"[DEBUG] handle_shift_request: store={store}")
     logger.info(f"[DEBUG] handle_shift_request called with message_text='{message_text}'")
     with open("debug.txt", "a") as f:
         f.write("handle_shift_request called\n")
     print('[handle_shift_request] called')
     try:
-        user_id = event.source.user_id
-        print(f"[DEBUG] handle_shift_request: user_id='{user_id}'")
         # 店舗情報がなければ登録案内を表示
         print("[DEBUG] handle_shift_request: calling get_store_by_user_id...")
-        store = get_store_by_user_id(event.source.user_id)
-        print(f"[DEBUG] handle_shift_request: get_store_by_user_id result: {store}")
         if not store:
             logger.info(f"[handle_shift_request] get_store_by_user_id failed for user_id={user_id}")
             print(f"[handle_shift_request] get_store_by_user_id failed for user_id={user_id}")
