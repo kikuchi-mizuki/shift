@@ -891,6 +891,9 @@ def handle_confirmation_yes(event):
     """依頼内容の確定処理"""
     try:
         user_id = event.source.user_id
+        # 追加: temp_dataのデバッグ出力
+        print(f"[DEBUG] handle_confirmation_yes: user_id={user_id}")
+        print(f"[DEBUG] temp_data: {user_management_service.get_or_create_session(user_id).temp_data}")
         # 保存された依頼内容を取得
         date = user_management_service.get_temp_data(user_id, "date")
         start_time = user_management_service.get_temp_data(user_id, "start_time")
