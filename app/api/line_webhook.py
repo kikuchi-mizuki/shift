@@ -233,22 +233,13 @@ def handle_text_message(event):
                 )
                 line_bot_service.line_bot_api.reply_message(event.reply_token, response)
             return
-        
-        # 勤務依頼の処理（店舗ユーザーのみ）
-        if "勤務依頼" in message_text or "シフト" in message_text:
-            logger.info(f"[DEBUG] Shift request detected: message_text='{message_text}', user_type={user_type}")
-            if user_type == UserType.STORE or user_type == UserType.UNKNOWN:
-                logger.info(f"[DEBUG] Calling handle_shift_request for user_id={event.source.user_id}")
-                handle_shift_request(event, message_text)
-            else:
-                logger.info(f"[DEBUG] User type {user_type} cannot send shift request")
-                response = TextSendMessage(
-                    text="薬剤師ユーザーは勤務依頼を送信できません。\n"
-                         "勤務依頼の受信のみ可能です。"
-                )
-                line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+
+        # ここから新しい分岐: 登録済み店舗ユーザーは何か送ったら即シフト依頼
+        if user_type == UserType.STORE:
+            handle_shift_request(event, message_text)
             return
-        
+
+        # 従来の勤務依頼ワード判定・薬剤師ユーザー向け分岐は不要になる
         # 確認応答の処理
         if message_text in ["はい", "確認", "確定"]:
             handle_confirmation_yes(event)
