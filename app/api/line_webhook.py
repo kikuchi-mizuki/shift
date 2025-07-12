@@ -246,6 +246,7 @@ def handle_text_message(event):
         # 従来の勤務依頼ワード判定・薬剤師ユーザー向け分岐は不要になる
         # 確認応答の処理
         if message_text in ["はい", "確認", "確定"]:
+            print(f"[DEBUG] handle_text_message: entering handle_confirmation_yes for user_id={user_id}, message_text={message_text}")
             handle_confirmation_yes(event)
             return
         
