@@ -116,7 +116,9 @@ def handle_follow(event):
             line_bot_service.line_bot_api.reply_message(event.reply_token, welcome_message)
             logger.info(f"Sent welcome message to {user_id}")
         else:
-            logger.info(f"User {user_id} is already registered. No welcome message sent.")
+            notify_message = TextSendMessage(text="シフト依頼があったら、今後はBotから通知が届きます！")
+            line_bot_service.line_bot_api.reply_message(event.reply_token, notify_message)
+            logger.info(f"Sent notify message to registered user {user_id}")
     except Exception as e:
         logger.error(f"Error handling follow event: {e}")
         # エラー時は基本的なメッセージを送信
