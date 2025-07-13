@@ -896,6 +896,30 @@ def handle_count_choice(event, postback_data: str):
             "break_120": "2時間"
         }
         break_time_label = break_time_mapping.get(break_time_data, "未選択")
+        
+                # --- ここから追加: time_slot, required_countの保存 ---
+        time_slot = None
+        if start_time_data:
+            if start_time_data.startswith("start_time_8") or start_time_data.startswith("start_time_9") or start_time_data.startswith("start_time_10") or start_time_data.startswith("start_time_11") or start_time_data.startswith("start_time_12"):
+                time_slot = "time_morning"
+            elif start_time_data.startswith("start_time_13") or start_time_data.startswith("start_time_14") or start_time_data.startswith("start_time_15") or start_time_data.startswith("start_time_16"):
+                time_slot = "time_afternoon"
+            elif start_time_data.startswith("start_time_17") or start_time_data.startswith("start_time_18") or start_time_data.startswith("start_time_19") or start_time_data.startswith("start_time_20") or start_time_data.startswith("start_time_21") or start_time_data.startswith("start_time_22"):
+                time_slot = "time_evening"
+            else:
+                time_slot = "time_full_day"
+        else:
+            time_slot = "time_full_day"
+        user_management_service.set_temp_data(user_id, "time_slot", time_slot)
+
+        count_num = 1
+        if postback_data == "count_2":
+            count_num = 2
+        elif postback_data == "count_3_plus":
+            count_num = 3
+        user_management_service.set_temp_data(user_id, "required_count", count_num)
+        # --- ここまで追加 ---
+
         # テキストで見やすく整形
         response = TextSendMessage(
             text=(
