@@ -395,7 +395,7 @@ def handle_postback(event):
             logger.error(f"Error sending error message: {push_error}")
 
 
-def handle_shift_request(event, message_text: str):
+def handle_shift_request(event, message_text: str, use_push: bool = False):
     user_id = event.source.user_id
     print(f"[DEBUG] handle_shift_request: user_id={user_id}")
     store = get_store_by_user_id(user_id)
@@ -405,7 +405,6 @@ def handle_shift_request(event, message_text: str):
         f.write("handle_shift_request called\n")
     print('[handle_shift_request] called')
     try:
-        # 店舗情報がなければ登録案内を表示
         print("[DEBUG] handle_shift_request: calling get_store_by_user_id...")
         if not store:
             logger.info(f"[handle_shift_request] get_store_by_user_id failed for user_id={user_id}")
@@ -419,20 +418,23 @@ def handle_shift_request(event, message_text: str):
                      "→ 「薬剤師登録」と入力\n\n"
                      "どちらを選択されますか？"
             )
-            line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+            if use_push:
+                line_bot_service.line_bot_api.push_message(user_id, response)
+            else:
+                line_bot_service.line_bot_api.reply_message(event.reply_token, response)
             return
         logger.info(f"[handle_shift_request] store found: {store}")
         print(f"[handle_shift_request] store found: {store}")
-        # メッセージを解析
         parsed_data = parse_shift_request(message_text)
         if not parsed_data:
             logger.info(f"[handle_shift_request] parse_shift_request failed for user_id={user_id}, message_text={message_text}")
-            # 解析できない場合は選択式のフォームを表示
             template = create_shift_request_template()
-            line_bot_service.line_bot_api.reply_message(event.reply_token, template)
+            if use_push:
+                line_bot_service.line_bot_api.push_message(user_id, template)
+            else:
+                line_bot_service.line_bot_api.reply_message(event.reply_token, template)
             return
         logger.info(f"[handle_shift_request] parse_shift_request succeeded: {parsed_data}")
-        # シフト依頼を作成
         shift_request = schedule_service.create_shift_request(
             store=store,
             target_date=parsed_data["date"],
@@ -441,7 +443,6 @@ def handle_shift_request(event, message_text: str):
             notes=parsed_data.get("notes")
         )
         logger.info(f"[handle_shift_request] shift_request created: {shift_request}")
-        # シフト依頼を処理
         logger.info(f"[handle_shift_request] calling process_shift_request...")
         success = schedule_service.process_shift_request(shift_request, store)
         logger.info(f"[handle_shift_request] process_shift_request result: {success}")
@@ -454,13 +455,18 @@ def handle_shift_request(event, message_text: str):
             )
         else:
             response = TextSendMessage(text="申し訳ございません。空き薬剤師が見つかりませんでした。")
-        line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+        if use_push:
+            line_bot_service.line_bot_api.push_message(user_id, response)
+        else:
+            line_bot_service.line_bot_api.reply_message(event.reply_token, response)
     except Exception as e:
         logger.error(f"Error handling shift request: {e}")
-        # 既にreply_messageが呼ばれている可能性があるため、push_messageを使用
         try:
             error_response = TextSendMessage(text="シフト依頼の処理中にエラーが発生しました。")
-            line_bot_service.line_bot_api.push_message(event.source.user_id, error_response)
+            if use_push:
+                line_bot_service.line_bot_api.push_message(user_id, error_response)
+            else:
+                line_bot_service.line_bot_api.reply_message(event.reply_token, error_response)
         except Exception as push_error:
             logger.error(f"Error sending error message: {push_error}")
 
@@ -1661,7 +1667,7 @@ def handle_store_registration_detailed(event, message_text: str):
                         logger.info(f"Successfully registered store user_id for {store_number} {store_name}")
                         line_bot_service.line_bot_api.reply_message(event.reply_token, response)
                         # 店舗登録完了後に自動でシフト依頼フローを開始
-                        handle_shift_request(event, "")
+                        handle_shift_request(event, "", True)
                         return
                     else:
                         response = TextSendMessage(
