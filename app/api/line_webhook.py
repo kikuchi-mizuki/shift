@@ -1622,79 +1622,48 @@ def handle_pharmacist_registration_prompt(event):
 def handle_store_registration_detailed(event, message_text: str):
     """店舗登録詳細処理（番号・店舗名でのuserId自動登録）"""
     try:
+        import re
         user_id = event.source.user_id
         print(f"[DEBUG] handle_store_registration_detailed: user_id={user_id}, message_text='{message_text}'")
-        
-        # メッセージから番号・店舗名を抽出（例: "店舗登録 001 メイプル薬局"）
+        # 柔軟な区切り文字対応
         text = message_text.replace("店舗登録", "").strip()
-        
-        # 区切り文字を検出（全角スペース、半角スペース）
-        separator = None
-        if "　" in text:  # 全角スペース
-            separator = "　"
-        elif " " in text:   # 半角スペース
-            separator = " "
-        
-        if separator:
-            try:
-                parts = [s.strip() for s in text.split(separator)]
-                if len(parts) >= 2:
-                    store_number = parts[0]
-                    store_name = parts[1]
-                    logger.info(f"Attempting to register store: number={store_number}, name={store_name}, user_id={user_id}")
-                    
-                    # Google Sheetsに店舗userIdを登録（必ず「店舗登録」シートを参照）
-                    success = google_sheets_service.register_store_user_id(
-                        number=store_number,
-                        name=store_name,
-                        user_id=user_id,
-                        sheet_name="店舗登録"
-                    )
-                    
-                    if success:
-                        # ユーザータイプを店舗に設定
-                        user_management_service.set_user_type(user_id, UserType.STORE)
-                        
-                        # 店舗情報を設定
-                        user_management_service.set_user_info(user_id, {
-                            "store_name": store_name,
-                            "store_number": store_number,
-                            "registered_at": datetime.now().isoformat()
-                        })
-                        
-                        # 登録完了メッセージ（push_messageでエラー回避）
-                        response = TextSendMessage(
-                            text=f"✅ 店舗登録が完了しました！\n\n"
-                                 f"🏪 店舗名: {store_name}\n"
-                                 f"📋 店舗番号: {store_number}"
-                        )
-                        
-                        # push_messageを使用してエラー回避
-                        line_bot_service.line_bot_api.push_message(user_id, response)
-                        
-                        # 自動でシフト依頼フロー開始
-                        handle_shift_request(event, "", use_push=True)
-                        
-                        logger.info(f"Store registration completed for {store_name} ({user_id})")
-                    else:
-                        error_message = TextSendMessage(
-                            text=f"❌ 店舗登録に失敗しました。\n\n"
-                                 f"店舗番号「{store_number}」と店舗名「{store_name}」の組み合わせが\n"
-                                 f"正しいかご確認ください。"
-                        )
-                        line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
-                else:
-                    error_message = TextSendMessage(
-                        text="❌ 店舗登録フォーマットが正しくありません。\n\n"
-                             "正しいフォーマット：\n"
-                             "店舗登録 [店舗番号] [店舗名]\n\n"
-                             "例：店舗登録 002 サンライズ薬局"
-                    )
-                    line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
-            except Exception as e:
-                logger.error(f"Error in store registration: {e}")
+        parts = re.split(r'[ ,、\u3000]+', text)
+        if len(parts) >= 2:
+            store_number = parts[0]
+            store_name = parts[1]
+            logger.info(f"Attempting to register store: number={store_number}, name={store_name}, user_id={user_id}")
+            # Google Sheetsに店舗userIdを登録（必ず「店舗登録」シートを参照）
+            success = google_sheets_service.register_store_user_id(
+                number=store_number,
+                name=store_name,
+                user_id=user_id,
+                sheet_name="店舗登録"
+            )
+            if success:
+                # ユーザータイプを店舗に設定
+                user_management_service.set_user_type(user_id, UserType.STORE)
+                # 店舗情報を設定
+                user_management_service.set_user_info(user_id, {
+                    "store_name": store_name,
+                    "store_number": store_number,
+                    "registered_at": datetime.now().isoformat()
+                })
+                # 登録完了メッセージ（push_messageでエラー回避）
+                response = TextSendMessage(
+                    text=f"✅ 店舗登録が完了しました！\n\n"
+                         f"🏪 店舗名: {store_name}\n"
+                         f"📋 店舗番号: {store_number}"
+                )
+                # push_messageを使用してエラー回避
+                line_bot_service.line_bot_api.push_message(user_id, response)
+                # 自動でシフト依頼フロー開始
+                handle_shift_request(event, "", use_push=True)
+                logger.info(f"Store registration completed for {store_name} ({user_id})")
+            else:
                 error_message = TextSendMessage(
-                    text="申し訳ございません。店舗登録中にエラーが発生しました。"
+                    text=f"❌ 店舗登録に失敗しました。\n\n"
+                         f"店舗番号「{store_number}」と店舗名「{store_name}」の組み合わせが\n"
+                         f"正しいかご確認ください。"
                 )
                 line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
         else:
@@ -1705,7 +1674,6 @@ def handle_store_registration_detailed(event, message_text: str):
                      "例：店舗登録 002 サンライズ薬局"
             )
             line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
-            
     except Exception as e:
         logger.error(f"Error in store registration detailed: {e}")
         error_message = TextSendMessage(
