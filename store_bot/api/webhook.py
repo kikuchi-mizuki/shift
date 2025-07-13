@@ -57,37 +57,41 @@ def handle_store_follow(event):
     try:
         user_id = event.source.user_id
         logger.info(f"New store user followed: {user_id}")
-        
-        # ユーザープロフィールを取得
         profile = store_line_bot_service.line_bot_api.get_profile(user_id)
         user_name = profile.display_name
-        
         logger.info(f"Store user profile: {user_name} ({user_id})")
-        
-        # 店舗登録の案内メッセージを送信
         welcome_message = TextSendMessage(
-            text=f"🏪 {user_name}さん、薬局シフト管理Bot（店舗版）へようこそ！\n\n"
-                 f"このBotは薬局の勤務依頼管理を効率化します。\n\n"
-                 f"📋 利用可能な機能：\n"
-                 f"• 勤務依頼の送信\n"
-                 f"• 薬剤師の自動検索・通知\n"
-                 f"• 応募状況の管理\n\n"
-                 f"「勤務依頼」と入力して、最初の依頼を送信してください。\n"
-                 f"登録は簡単で、すぐに利用開始できます！"
+            text="\U0001F3E5 薬局シフト管理Botへようこそ！\n\n"
+                 "このBotは薬局の勤務シフト管理を効率化します。\n\n"
+                 "\U0001F4CB 利用方法を選択してください：\n\n"
+                 "\U0001F3EA 【店舗の方】\n"
+                 "• 店舗登録がお済みでない方は、\n"
+                 "店舗登録、 店舗番号、店舗名を送信してください！\n"
+                 "例：店舗登録 002 サンライズ薬局\n\n"
+                 "\U0001F48A 【薬剤師の方】\n"
+                 "• 店舗登録がお済みでない方は、\n"
+                 "お名前、電話番号を送信してください！\n\n"
+                 "登録は簡単で、すぐに利用開始できます！"
         )
-        
         store_line_bot_service.line_bot_api.reply_message(
             event.reply_token,
             welcome_message
         )
-        
         logger.info(f"Sent welcome message to store user {user_name} ({user_id})")
-        
     except Exception as e:
         logger.error(f"Error handling store follow event: {e}")
         error_message = TextSendMessage(
-            text="🏪 薬局シフト管理Bot（店舗版）へようこそ！\n\n"
-                 "「勤務依頼」と入力して、最初の依頼を送信してください。"
+            text="\U0001F3E5 薬局シフト管理Botへようこそ！\n\n"
+                 "このBotは薬局の勤務シフト管理を効率化します。\n\n"
+                 "\U0001F4CB 利用方法を選択してください：\n\n"
+                 "\U0001F3EA 【店舗の方】\n"
+                 "• 店舗登録がお済みでない方は、\n"
+                 "店舗登録、 店舗番号、店舗名を送信してください！\n"
+                 "例：店舗登録 002 サンライズ薬局\n\n"
+                 "\U0001F48A 【薬剤師の方】\n"
+                 "• 店舗登録がお済みでない方は、\n"
+                 "お名前、電話番号を送信してください！\n\n"
+                 "登録は簡単で、すぐに利用開始できます！"
         )
         store_line_bot_service.line_bot_api.reply_message(
             event.reply_token,
