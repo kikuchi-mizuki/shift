@@ -274,6 +274,10 @@ def handle_postback(event):
     postback_data = event.postback.data
     print(f"handle_postback: postback_data={postback_data!r}")
     try:
+        if postback_data in ["はい", "確認", "確定"]:
+            print(f"[DEBUG] handle_postback: entering handle_confirmation_yes for user_id={user_id}, postback_data={postback_data}")
+            handle_confirmation_yes(event)
+            return
         logger.info(f"Received postback from {user_id}: {postback_data}")
         # シフト依頼ボタン押下時の処理を追加
         if postback_data == "shift_request_start":
