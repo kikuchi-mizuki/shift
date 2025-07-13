@@ -1659,6 +1659,10 @@ def handle_store_registration_detailed(event, message_text: str):
                                  f"「勤務依頼」と入力して依頼を開始してください。"
                         )
                         logger.info(f"Successfully registered store user_id for {store_number} {store_name}")
+                        line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+                        # 店舗登録完了後に自動でシフト依頼フローを開始
+                        handle_shift_request(event, "")
+                        return
                     else:
                         response = TextSendMessage(
                             text=f"{store_number} {store_name}の登録に失敗しました。店舗番号・店舗名が正しいかご確認ください。"
