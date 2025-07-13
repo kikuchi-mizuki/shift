@@ -144,8 +144,13 @@ class ScheduleService:
                 created_at=datetime.now(),
                 updated_at=datetime.now()
             )
+            # 追加: 開始・終了時刻ラベルをshift_requestから引き継ぐ
+            if hasattr(shift_request, 'start_time_label'):
+                schedule.start_time_label = shift_request.start_time_label
+            if hasattr(shift_request, 'end_time_label'):
+                schedule.end_time_label = shift_request.end_time_label
             self.schedules[schedule.id] = schedule
-
+            
             # Google Sheetsに応募確定を記録
             store = self._get_store(shift_request.store_id)  # 実際はデータベースから取得
             if store:
@@ -167,8 +172,8 @@ class ScheduleService:
                 except Exception as e:
                     logger.error(f"Failed to record application in Google Sheets: {e}")
                 # 3. 店舗に確定通知
-                confirmed_pharmacists = [pharmacist]
-                self.line_bot_service.send_confirmation_to_store(store, shift_request, confirmed_pharmacists)
+            confirmed_pharmacists = [pharmacist]
+            self.line_bot_service.send_confirmation_to_store(store, shift_request, confirmed_pharmacists)
             else:
                 logger.error(f"Store not found for store_id: {shift_request.store_id}. Skipping confirmation notification.")
             # 4. 他の応募者に辞退通知

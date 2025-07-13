@@ -244,6 +244,11 @@ class GoogleSheetsService:
 
     def _create_schedule_entry(self, schedule: Schedule, store: Store) -> str:
         """スケジュールエントリを作成"""
+        # start_time_label, end_time_labelがあれば優先して使う
+        start = getattr(schedule, 'start_time_label', None)
+        end = getattr(schedule, 'end_time_label', None)
+        if start and end:
+            return f"{start}〜{end} {store.store_name}"
         time_slot_text = schedule.time_slot.value if hasattr(schedule.time_slot, 'value') else str(schedule.time_slot)
         return f"{time_slot_text} - {store.store_name}"
 
