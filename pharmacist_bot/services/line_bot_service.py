@@ -72,10 +72,8 @@ def handle_pharmacist_message(event):
             sheets_service = GoogleSheetsService()
             success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
             if success:
-                pharmacist_line_bot_service.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=f"{name}さんのLINE IDを自動登録しました。今後はBotから通知が届きます。")
-                )
+                # TextSendMessage(text=f"{name}さんのLINE IDを自動登録しました。今後はBotから通知が届きます。")
+                # ↑このメッセージ送信を削除
                 return
             else:
                 pharmacist_line_bot_service.reply_message(
