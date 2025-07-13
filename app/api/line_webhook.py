@@ -274,14 +274,22 @@ def handle_postback(event):
     postback_data = event.postback.data
     print(f"handle_postback: postback_data={postback_data!r}")
     try:
-        if postback_data in ["はい", "確認", "確定"]:
+        if postback_data in ["はい", "確認", "確定", "accept", "ok", "yes"] or postback_data.startswith("accept:"):
             print(f"[DEBUG] handle_postback: entering handle_confirmation_yes for user_id={user_id}, postback_data={postback_data}")
             handle_confirmation_yes(event)
+            return
+        if postback_data.startswith("decline:"):
+            print(f"[DEBUG] handle_postback: entering handle_decline_response for user_id={user_id}, postback_data={postback_data}")
+            handle_decline_response(event, postback_data)
+            return
+        if postback_data.startswith("conditional:"):
+            print(f"[DEBUG] handle_postback: entering handle_conditional_response for user_id={user_id}, postback_data={postback_data}")
+            handle_conditional_response(event, postback_data)
             return
         logger.info(f"Received postback from {user_id}: {postback_data}")
         # シフト依頼ボタン押下時の処理を追加
         if postback_data == "shift_request_start":
-            handle_shift_request(event)
+            handle_shift_request(event, "")
             return
         # 既存の分岐はそのまま
         if postback_data == "select_date":
