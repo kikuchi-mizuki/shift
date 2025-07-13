@@ -368,7 +368,7 @@ def handle_store_date_choice(event, postback_data: str):
         logger.info(f"Saved date for store user {user_id}: {selected_date}")
         # 次のステップ（時間選択）に進む
         response = TextSendMessage(
-            text=f"日付: {selected_date.strftime('%Y/%m/%d')}\n次に時間帯を選択してください。"
+            text=f"✅日付: {selected_date.strftime('%Y/%m/%d')}\n次に時間帯を選択してください。"
         )
         time_template = TemplateSendMessage(
             alt_text="時間帯を選択してください",

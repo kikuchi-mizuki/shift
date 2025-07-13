@@ -787,7 +787,7 @@ def handle_date_choice(event, postback_data: str):
         logger.info(f"Saved date for user {user_id}: {selected_date}")
         # 次のステップ（勤務開始時間帯選択）に進む
         response = TextSendMessage(
-            text=f"日付: {selected_date.strftime('%Y/%m/%d')}\n次に勤務開始時間帯を選択してください。"
+            text=f"✅日付: {selected_date.strftime('%Y/%m/%d')}\n次に勤務開始時間帯を選択してください。"
         )
         messages = handle_start_time_period_selection(event)
         reply_msgs = [response]
