@@ -238,22 +238,18 @@ def handle_text_message(event):
                 line_bot_service.line_bot_api.reply_message(event.reply_token, response)
             return
 
-        # ここから新しい分岐: 登録済み店舗ユーザーは何か送ったら即シフト依頼
+        # 確認応答の処理（最優先）
+        if message_text in ["はい", "確認", "確定"]:
+            print(f"[DEBUG] handle_text_message: entering handle_confirmation_yes for user_id={user_id}, message_text={message_text}")
+            handle_confirmation_yes(event)
+            return
+
+        # 登録済み店舗ユーザーは何か送ったら即シフト依頼
         if user_type == UserType.STORE:
             handle_shift_request(event, message_text)
             return
 
         # 従来の勤務依頼ワード判定・薬剤師ユーザー向け分岐は不要になる
-        # 確認応答の処理
-        if message_text in ["はい", "確認", "確定"]:
-            print(f"[DEBUG] handle_text_message: entering handle_confirmation_yes for user_id={user_id}, message_text={message_text}")
-            handle_confirmation_yes(event)
-            return
-        
-        if message_text in ["いいえ", "キャンセル", "取り消し"]:
-            handle_confirmation_no(event)
-            return
-        
         # その他のメッセージ
         handle_other_messages(event, message_text)
         
