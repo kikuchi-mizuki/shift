@@ -266,6 +266,9 @@ def handle_text_message(event):
                              f"これで勤務依頼の通知を受け取ることができます。\n"
                              f"「勤務依頼」と入力してテストしてみてください。"
                     )
+                    line_bot_service.line_bot_api.reply_message(event.reply_token, confirmation_message)
+                    # 追加: 登録済みユーザー案内をpush_messageで送信
+                    line_bot_service.line_bot_api.push_message(user_id, TextSendMessage(text="シフト依頼があったら、今後はBotから通知が届きます！"))
                 else:
                     confirmation_message = TextSendMessage(
                         text="❌ 登録処理中にエラーが発生しました。\n"
@@ -1568,6 +1571,9 @@ def handle_pharmacist_registration(event, message_text: str):
                      f"これで勤務依頼の通知を受け取ることができます。\n"
                      f"「勤務依頼」と入力してテストしてみてください。"
             )
+            line_bot_service.line_bot_api.reply_message(event.reply_token, confirmation_message)
+            # 追加: 登録済みユーザー案内をpush_messageで送信
+            line_bot_service.line_bot_api.push_message(user_id, TextSendMessage(text="シフト依頼があったら、今後はBotから通知が届きます！"))
         else:
             confirmation_message = TextSendMessage(
                 text="❌ 登録処理中にエラーが発生しました。\n"
