@@ -153,7 +153,9 @@ class ScheduleService:
             
             # Google Sheetsに応募確定を記録
             store = self._get_store(shift_request.store_id)  # 実際はデータベースから取得
-            if store:
+            if not store:
+                logger.error(f"Store not found for store_id: {shift_request.store_id}. Skipping confirmation notification.")
+            else:
                 # 1. スケジュール確定をGoogle Sheetsに反映
                 success = self.google_sheets_service.update_schedule(schedule, store)
                 if not success:
@@ -172,10 +174,8 @@ class ScheduleService:
                 except Exception as e:
                     logger.error(f"Failed to record application in Google Sheets: {e}")
                 # 3. 店舗に確定通知
-            confirmed_pharmacists = [pharmacist]
-            self.line_bot_service.send_confirmation_to_store(store, shift_request, confirmed_pharmacists)
-            else:
-                logger.error(f"Store not found for store_id: {shift_request.store_id}. Skipping confirmation notification.")
+                confirmed_pharmacists = [pharmacist]
+                self.line_bot_service.send_confirmation_to_store(store, shift_request, confirmed_pharmacists)
             # 4. 他の応募者に辞退通知
             self._notify_other_applicants(shift_request, pharmacist)
             # 5. リクエストステータスを完了に更新
