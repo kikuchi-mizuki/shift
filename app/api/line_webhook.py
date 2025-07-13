@@ -899,13 +899,13 @@ def handle_count_choice(event, postback_data: str):
         # テキストで見やすく整形
         response = TextSendMessage(
             text=(
-                "【依頼内容の確認】\n"
-                f"日付: {date_str}\n"
-                f"開始: {start_time_label}\n"
-                f"終了: {end_time_label}\n"
-                f"休憩: {break_time_label}\n"
-                f"人数: {selected_count}\n"
-                "\nこの内容で依頼を送信しますか？\n"
+                "【依頼内容の確認】\n\n"
+                f"📅 日付: {date_str}\n"
+                f"🕒 開始: {start_time_label}\n"
+                f"🕓 終了: {end_time_label}\n"
+                f"⏸️ 休憩: {break_time_label}\n"
+                f"👥 人数: {selected_count}\n\n"
+                "この内容で依頼を送信しますか？\n"
                 "「はい」または「いいえ」でお答えください。"
             )
         )
