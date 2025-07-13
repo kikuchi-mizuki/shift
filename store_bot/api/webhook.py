@@ -543,7 +543,7 @@ def handle_store_other_messages(event, message_text: str):
     except Exception as e:
         logger.error(f"Error handling store other messages: {e}")
         error_message = TextSendMessage(text="申し訳ございません。エラーが発生しました。")
-        store_line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
+        store_line_bot_service.line_bot_api.reply_message(event.reply_token, error_message) 
 
 
 def send_guide_message(event):

@@ -14,7 +14,8 @@ from linebot.models import (
     FollowEvent,
     UnfollowEvent,
     QuickReply,
-    QuickReplyButton
+    QuickReplyButton,
+    FlexSendMessage
 )
 from dateutil.parser import parse as parse_date
 from fastapi.responses import JSONResponse
@@ -842,27 +843,22 @@ def handle_time_choice(event, postback_data: str):
 
 
 def handle_count_choice(event, postback_data: str):
-    """人数選択の処理"""
     try:
         user_id = event.source.user_id
-        # 選択された人数を取得
         count_mapping = {
             "count_1": "1名",
             "count_2": "2名",
             "count_3_plus": "3名以上"
         }
         selected_count = count_mapping.get(postback_data, "不明")
-        # ユーザー管理サービスに人数を保存
         user_management_service.set_temp_data(user_id, "count", postback_data)
         user_management_service.set_temp_data(user_id, "count_text", selected_count)
         logger.info(f"Saved count for user {user_id}: {selected_count}")
-        # 保存された依頼内容を取得
         date = user_management_service.get_temp_data(user_id, "date")
         if date:
             date_str = date.strftime('%Y/%m/%d')
         else:
             date_str = "未選択"
-        # 開始・終了・休憩時間を取得
         start_time_data = user_management_service.get_temp_data(user_id, "start_time")
         end_time_data = user_management_service.get_temp_data(user_id, "end_time")
         break_time_data = user_management_service.get_temp_data(user_id, "break_time")
@@ -884,16 +880,18 @@ def handle_count_choice(event, postback_data: str):
             "break_120": "2時間"
         }
         break_time_label = break_time_mapping.get(break_time_data, "未選択")
-        # 依頼内容の確認メッセージを送信
+        # テキストで見やすく整形
         response = TextSendMessage(
-            text=f"依頼内容の確認\n"
-                 f"日付: {date_str}\n"
-                 f"開始: {start_time_label}\n"
-                 f"終了: {end_time_label}\n"
-                 f"休憩: {break_time_label}\n"
-                 f"人数: {selected_count}\n\n"
-                 f"この内容で依頼を送信しますか？\n"
-                 f"「はい」または「いいえ」でお答えください。"
+            text=(
+                "【依頼内容の確認】\n"
+                f"日付: {date_str}\n"
+                f"開始: {start_time_label}\n"
+                f"終了: {end_time_label}\n"
+                f"休憩: {break_time_label}\n"
+                f"人数: {selected_count}\n"
+                "\nこの内容で依頼を送信しますか？\n"
+                "「はい」または「いいえ」でお答えください。"
+            )
         )
         line_bot_service.line_bot_api.reply_message(event.reply_token, response)
     except Exception as e:

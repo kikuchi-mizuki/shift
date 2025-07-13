@@ -56,7 +56,7 @@ class PharmacistLineBotService:
 
 
 # グローバルインスタンス
-pharmacist_line_bot_service = PharmacistLineBotService()
+pharmacist_line_bot_service = PharmacistLineBotService() 
 
 @pharmacist_line_bot_service.handler.add(MessageEvent, message=TextMessage)
 def handle_pharmacist_message(event):
