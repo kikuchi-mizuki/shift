@@ -25,8 +25,9 @@ def send_guide_message(event):
         "店舗登録、 店舗番号、店舗名を送信してください！\n"
         "例：店舗登録 002 サンライズ薬局\n\n"
         "\U0001F48A 【薬剤師の方】\n"
-        "• 店舗登録がお済みでない方は、\n"
-        "お名前、電話番号を送信してください！\n\n"
+        "• 登録がお済みでない方は、\n"
+        "お名前、電話番号を送信してください！\n"
+        "例：田中薬剤師,090-1234-5678\n\n"
         "登録は簡単で、すぐに利用開始できます！"
     )
     from pharmacist_bot.services.line_bot_service import pharmacist_line_bot_service
