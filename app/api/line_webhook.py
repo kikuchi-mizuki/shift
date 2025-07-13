@@ -1601,10 +1601,9 @@ def handle_other_messages(event, message_text: str):
         user_type = session.user_type
         if user_type == UserType.UNKNOWN:
             response = TextSendMessage(text=WELCOME_GUIDE)
-            line_bot_service.line_bot_api.reply_message(event.reply_token, response)
         else:
-            response = TextSendMessage(text="ご質問内容が認識できませんでした。必要な操作を選択してください。")
-            line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+            response = TextSendMessage(text="シフト依頼があったら、今後はBotから通知が届きます！")
+        line_bot_service.line_bot_api.reply_message(event.reply_token, response)
     except Exception as e:
         logger.error(f"Error handling other messages: {e}")
         error_message = TextSendMessage(text="申し訳ございません。エラーが発生しました。")
