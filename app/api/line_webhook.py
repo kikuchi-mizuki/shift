@@ -1660,9 +1660,7 @@ def handle_store_registration_detailed(event, message_text: str):
                         response = TextSendMessage(
                             text=f"✅ 店舗登録が完了しました！\n\n"
                                  f"🏪 店舗番号: {store_number}\n"
-                                 f"🏪 店舗名: {store_name}\n\n"
-                                 f"これで勤務依頼を送信できます。\n"
-                                 f"「勤務依頼」と入力して依頼を開始してください。"
+                                 f"🏪 店舗名: {store_name}"
                         )
                         logger.info(f"Successfully registered store user_id for {store_number} {store_name}")
                         line_bot_service.line_bot_api.reply_message(event.reply_token, response)
