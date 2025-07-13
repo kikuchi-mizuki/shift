@@ -1921,15 +1921,19 @@ def handle_parsed_shift_request(event, parsed_data, store):
         user_management_service.set_temp_data(user_id, "required_count", parsed_data["required_count"])
         user_management_service.set_temp_data(user_id, "notes", parsed_data.get("notes", ""))
         
-        # 依頼内容確認メッセージを送信
+        # 依頼内容確認メッセージを見やすく整形
         response = TextSendMessage(
-            text=f"【依頼内容の確認】\n"
-                 f"日付: {parsed_data['date'].strftime('%Y/%m/%d')}\n"
-                 f"時間帯: {parsed_data['time_slot']}\n"
-                 f"人数: {parsed_data['required_count']}名\n"
-                 f"備考: {parsed_data.get('notes', 'なし')}\n\n"
-                 f"この内容で依頼を送信しますか？\n"
-                 f"「はい」または「いいえ」でお答えください。"
+            text=(
+                "【依頼内容の確認】\n\n"
+                f"📅 日付: {parsed_data['date'].strftime('%Y/%m/%d')}\n"
+                f"🕒 開始: {parsed_data.get('start_time_label', '未指定')}\n"
+                f"🕓 終了: {parsed_data.get('end_time_label', '未指定')}\n"
+                f"⏸️ 休憩: {parsed_data.get('break_time_label', '未指定')}\n"
+                f"👥 人数: {parsed_data['required_count']}名\n"
+                f"📝 備考: {parsed_data.get('notes', 'なし')}\n\n"
+                "この内容で依頼を送信しますか？\n"
+                "「はい」または「いいえ」でお答えください。"
+            )
         )
         line_bot_service.line_bot_api.reply_message(event.reply_token, response)
     except Exception as e:
