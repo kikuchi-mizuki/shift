@@ -1627,7 +1627,7 @@ def handle_store_registration_detailed(event, message_text: str):
         print(f"[DEBUG] handle_store_registration_detailed: user_id={user_id}, message_text='{message_text}'")
         # 柔軟な区切り文字対応
         text = message_text.replace("店舗登録", "").strip()
-        parts = re.split(r'[ ,、\u3000]+', text)
+        parts = list(filter(None, re.split(r'[ ,、\u3000]+', text)))
         if len(parts) >= 2:
             store_number = parts[0]
             store_name = parts[1]
