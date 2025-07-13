@@ -10,55 +10,71 @@ from app.models.schedule import TimeSlot
 logger = logging.getLogger(__name__)
 
 
+def parse_pharmacist_registration(text: str) -> Optional[Dict[str, Any]]:
+    """薬剤師登録情報を解析（柔軟な区切り文字対応）"""
+    try:
+        # 柔軟な区切り文字対応
+        parts = re.split(r'[ ,、\u3000]+', text.strip())
+        if len(parts) >= 2:
+            return {
+                "name": parts[0],
+                "phone": parts[1],
+                "availability": parts[2:] if len(parts) > 2 else []
+            }
+    except Exception:
+        pass
+    return None
+
+def parse_store_registration(text: str) -> Optional[Dict[str, Any]]:
+    """店舗登録情報を解析（柔軟な区切り文字対応）"""
+    try:
+        # "店舗登録"を除去
+        text = text.replace("店舗登録", "").strip()
+        
+        # 柔軟な区切り文字対応
+        parts = re.split(r'[ ,、\u3000]+', text)
+        if len(parts) >= 2:
+            return {
+                "number": parts[0],
+                "name": parts[1]
+            }
+    except Exception:
+        pass
+    return None
+
 def parse_shift_request(text: str) -> Optional[Dict[str, Any]]:
-    """シフト依頼のテキストを解析"""
+    """シフト依頼を解析"""
     try:
         # 日付の抽出
-        date_match = re.search(r'(\d{1,2})/(\d{1,2})', text)
+        date_match = re.search(r'(\d{1,2})[/\-](\d{1,2})', text)
         if not date_match:
             return None
         
-        month, day = int(date_match.group(1)), int(date_match.group(2))
-        current_year = datetime.now().year
-        
-        # 年を推定（過去の日付の場合は来年）
-        target_date = date(current_year, month, day)
-        if target_date < date.today():
-            target_date = date(current_year + 1, month, day)
+        month, day = map(int, date_match.groups())
+        year = datetime.now().year
+        target_date = date(year, month, day)
         
         # 時間帯の抽出
         time_slot = None
-        if re.search(r'\bAM\b|\b午前\b', text, re.IGNORECASE):
-            time_slot = TimeSlot.AM
-        elif re.search(r'\bPM\b|\b午後\b', text, re.IGNORECASE):
-            time_slot = TimeSlot.PM
-        elif re.search(r'\b終日\b|\bフル\b', text):
-            time_slot = TimeSlot.FULL_DAY
-        
-        if not time_slot:
-            return None
+        if re.search(r'午前|AM|am|9:00|10:00|11:00|12:00', text):
+            time_slot = "time_morning"
+        elif re.search(r'午後|PM|pm|13:00|14:00|15:00|16:00|17:00', text):
+            time_slot = "time_afternoon"
+        elif re.search(r'夜間|18:00|19:00|20:00|21:00', text):
+            time_slot = "time_evening"
+        else:
+            time_slot = "time_full_day"
         
         # 人数の抽出
-        count_match = re.search(r'(\d+)\s*名', text)
-        if not count_match:
-            count_match = re.search(r'人数[：:]\s*(\d+)', text)
-        
-        required_count = 1  # デフォルト
-        if count_match:
-            required_count = int(count_match.group(1))
-            if required_count > 3:
-                required_count = 3  # 最大3名まで
+        count_match = re.search(r'(\d+)名?', text)
+        required_count = int(count_match.group(1)) if count_match else 1
         
         # 備考の抽出
-        notes = None
-        notes_match = re.search(r'備考[：:]\s*(.+)', text)
-        if notes_match:
-            notes = notes_match.group(1).strip()
-        else:
-            # 時間に関する記述を備考として抽出
-            time_notes = re.search(r'(\d{1,2}:\d{2}|\d{1,2}時).*?(スタート|開始|希望)', text)
-            if time_notes:
-                notes = time_notes.group(0)
+        notes = ""
+        if "備考" in text or "メモ" in text:
+            notes_match = re.search(r'(備考|メモ)[:：]\s*(.+)', text)
+            if notes_match:
+                notes = notes_match.group(2).strip()
         
         return {
             "date": target_date,
@@ -66,9 +82,7 @@ def parse_shift_request(text: str) -> Optional[Dict[str, Any]]:
             "required_count": required_count,
             "notes": notes
         }
-        
-    except Exception as e:
-        logger.error(f"Error parsing shift request: {e}")
+    except Exception:
         return None
 
 
@@ -114,38 +128,30 @@ def parse_pharmacist_response(text: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def parse_date_japanese(text: str) -> Optional[date]:
-    """日本語の日付表現を解析"""
+def parse_date_flexible(text: str) -> Optional[date]:
+    """柔軟な日付解析"""
     try:
-        # 日本語の日付パターン
-        patterns = [
-            r'(\d{1,2})月(\d{1,2})日',
-            r'(\d{1,2})/(\d{1,2})',
-            r'(\d{1,2})-(\d{1,2})',
+        # 様々な日付形式に対応
+        date_patterns = [
+            r'(\d{1,2})[/\-](\d{1,2})',  # 4/15, 4-15
+            r'(\d{1,2})月(\d{1,2})日',   # 4月15日
+            r'(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})',  # 2024/4/15
         ]
         
-        for pattern in patterns:
+        for pattern in date_patterns:
             match = re.search(pattern, text)
             if match:
-                month, day = int(match.group(1)), int(match.group(2))
-                current_year = datetime.now().year
-                
-                # 年を推定
-                target_date = date(current_year, month, day)
-                if target_date < date.today():
-                    target_date = date(current_year + 1, month, day)
-                
-                return target_date
+                if len(match.groups()) == 2:
+                    month, day = map(int, match.groups())
+                    year = datetime.now().year
+                    return date(year, month, day)
+                elif len(match.groups()) == 3:
+                    year, month, day = map(int, match.groups())
+                    return date(year, month, day)
         
-        # dateparserを使用した解析
-        parsed_date = dateparser.parse(text, languages=['ja'])
-        if parsed_date:
-            return parsed_date.date()
-        
-        return None
-        
-    except Exception as e:
-        logger.error(f"Error parsing date: {e}")
+        # dateutil.parserを使用した柔軟な解析
+        return date_parser.parse(text, fuzzy=True).date()
+    except Exception:
         return None
 
 
@@ -168,7 +174,7 @@ def parse_time_slot(text: str) -> Optional[TimeSlot]:
         return None
 
 
-def extract_store_info(text: str) -> Optional[Dict[str, str]]:
+def extract_store_info(text: str) -> Optional[Dict[str, Any]]:
     """店舗情報を抽出"""
     try:
         # 店舗番号

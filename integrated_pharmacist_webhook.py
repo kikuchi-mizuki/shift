@@ -4,6 +4,7 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import os
 import logging
+import re
 
 from shared.services.google_sheets_service import GoogleSheetsService
 
@@ -29,18 +30,12 @@ def handle_pharmacist_message(event):
     text = event.message.text.strip()
     logger.info(f"Received pharmacist message: {text}")
     
-    # 区切り文字を検出（カンマ、全角スペース、半角スペース）
-    separator = None
-    if "," in text:
-        separator = ","
-    elif "　" in text:  # 全角スペース
-        separator = "　"
-    elif " " in text:   # 半角スペース
-        separator = " "
-    
-    if separator:
-        try:
-            name, phone = [s.strip() for s in text.split(separator, 1)]
+    # 柔軟な区切り文字対応
+    if re.search(r'[ ,、\u3000]', text):
+        parts = re.split(r'[ ,、\u3000]+', text)
+        if len(parts) >= 2:
+            name = parts[0]
+            phone = parts[1]
             user_id = event.source.user_id
             logger.info(f"Attempting to register pharmacist: name={name}, phone={phone}, user_id={user_id}")
             
@@ -60,18 +55,24 @@ def handle_pharmacist_message(event):
                 )
                 logger.warning(f"Failed to register pharmacist user_id for {name}")
             return
-        except Exception as e:
-            logger.error(f"Error in pharmacist registration: {e}")
-            pharmacist_line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="登録処理中にエラーが発生しました。")
-            )
-            return
-    
     # 通常の応答
+    guide_text = (
+        "\U0001F3E5 薬局シフト管理Botへようこそ！\n\n"
+        "このBotは薬局の勤務シフト管理を効率化します。\n\n"
+        "\U0001F4CB 利用方法を選択してください：\n\n"
+        "\U0001F3EA 【店舗の方】\n"
+        "• 店舗登録がお済みでない方は、\n"
+        "店舗登録、 店舗番号、店舗名を送信してください！\n"
+        "例：店舗登録 002 サンライズ薬局\n\n"
+        "\U0001F48A 【薬剤師の方】\n"
+        "• 登録がお済みでない方は、\n"
+        "お名前、電話番号を送信してください！\n"
+        "例：田中薬剤師,090-1234-5678\n\n"
+        "登録は簡単で、すぐに利用開始できます！"
+    )
     pharmacist_line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=f"薬剤師Bot: {event.message.text} を受信しました")
+        TextSendMessage(text=guide_text)
     )
 
 @router.post("/webhook")

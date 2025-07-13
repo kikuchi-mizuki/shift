@@ -14,6 +14,7 @@ from linebot.models import (
     FollowEvent,
     UnfollowEvent
 )
+import re
 
 from store_bot.config import store_settings
 from store_bot.services.line_bot_service import store_line_bot_service
@@ -27,6 +28,21 @@ router = APIRouter(prefix="/store", tags=["store"])
 
 # 店舗ユーザーの一時データ保存
 store_temp_data: Dict[str, Dict[str, Any]] = {}
+
+GUIDE_TEXT = (
+    "\U0001F3E5 薬局シフト管理Botへようこそ！\n\n"
+    "このBotは薬局の勤務シフト管理を効率化します。\n\n"
+    "\U0001F4CB 利用方法を選択してください：\n\n"
+    "\U0001F3EA 【店舗の方】\n"
+    "• 店舗登録がお済みでない方は、\n"
+    "店舗登録、 店舗番号、店舗名を送信してください！\n"
+    "例：店舗登録 002 サンライズ薬局\n\n"
+    "\U0001F48A 【薬剤師の方】\n"
+    "• 登録がお済みでない方は、\n"
+    "お名前、電話番号を送信してください！\n"
+    "例：田中薬剤師,090-1234-5678\n\n"
+    "登録は簡単で、すぐに利用開始できます！"
+)
 
 
 @router.post("/webhook")
@@ -167,49 +183,53 @@ def handle_store_postback(event):
 def handle_store_shift_request(event, message_text: str):
     """店舗のシフト依頼処理"""
     try:
+        user_id = event.source.user_id
+        print(f"[DEBUG] handle_store_shift_request: user_id={user_id}, message_text='{message_text}'")
+        
         # メッセージを解析
         parsed_data = parse_shift_request(message_text)
         
-        if not parsed_data:
+        if parsed_data:
+            # シフト依頼内容を解析できた場合
+            handle_store_parsed_shift_request(event, parsed_data)
+        else:
             # 解析できない場合は選択式のフォームを表示
             template = create_store_shift_request_template()
             store_line_bot_service.line_bot_api.reply_message(event.reply_token, template)
-            return
-        
-        # シフト依頼を作成
-        store = get_store_by_user_id(event.source.user_id)
-        if not store:
-            response = TextSendMessage(text="店舗情報の取得に失敗しました。")
-            store_line_bot_service.line_bot_api.reply_message(event.reply_token, response)
-            return
-        
-        shift_request = store_schedule_service.create_shift_request(
-            store=store,
-            target_date=parsed_data["date"],
-            time_slot=parsed_data["time_slot"],
-            required_count=parsed_data["required_count"],
-            notes=parsed_data.get("notes") or ''
-        )
-        
-        # シフト依頼を処理
-        success = store_schedule_service.process_shift_request(shift_request, store)
-        
-        if success:
-            response = TextSendMessage(
-                text=f"シフト依頼を受け付けました。\n"
-                     f"依頼ID: {shift_request.id}\n"
-                     f"日時: {parsed_data['date'].strftime('%m/%d')} {parsed_data['time_slot']}\n"
-                     f"人数: {parsed_data['required_count']}名\n"
-                     f"薬剤師に通知しました。"
-            )
-        else:
-            response = TextSendMessage(text="申し訳ございません。空き薬剤師が見つかりませんでした。")
-        
-        store_line_bot_service.line_bot_api.reply_message(event.reply_token, response)
-        
+            
     except Exception as e:
-        logger.error(f"Error handling store shift request: {e}")
-        error_response = TextSendMessage(text="シフト依頼の処理中にエラーが発生しました。")
+        logger.error(f"Error in handle_store_shift_request: {e}")
+        error_response = TextSendMessage(text="シフト依頼処理中にエラーが発生しました。")
+        store_line_bot_service.line_bot_api.reply_message(event.reply_token, error_response)
+
+
+def handle_store_parsed_shift_request(event, parsed_data):
+    """解析済みシフト依頼の処理（店舗）"""
+    user_id = event.source.user_id
+    print(f"[DEBUG] handle_store_parsed_shift_request: user_id={user_id}, parsed_data={parsed_data}")
+    try:
+        # 依頼内容を一時保存
+        if user_id not in store_temp_data:
+            store_temp_data[user_id] = {}
+        store_temp_data[user_id]["date"] = parsed_data["date"]
+        store_temp_data[user_id]["time_slot"] = parsed_data["time_slot"]
+        store_temp_data[user_id]["required_count"] = parsed_data["required_count"]
+        store_temp_data[user_id]["notes"] = parsed_data.get("notes", "")
+        
+        # 依頼内容確認メッセージを送信
+        response = TextSendMessage(
+            text=f"【依頼内容の確認】\n"
+                 f"日付: {parsed_data['date'].strftime('%Y/%m/%d')}\n"
+                 f"時間帯: {parsed_data['time_slot']}\n"
+                 f"人数: {parsed_data['required_count']}名\n"
+                 f"備考: {parsed_data.get('notes', 'なし')}\n\n"
+                 f"この内容で依頼を送信しますか？\n"
+                 f"「はい」または「いいえ」でお答えください。"
+        )
+        store_line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+    except Exception as e:
+        logger.error(f"Error in handle_store_parsed_shift_request: {e}")
+        error_response = TextSendMessage(text="依頼内容の処理中にエラーが発生しました。")
         store_line_bot_service.line_bot_api.reply_message(event.reply_token, error_response)
 
 
@@ -462,35 +482,45 @@ def handle_store_confirmation_yes(event):
     """店舗の依頼内容確定処理"""
     try:
         user_id = event.source.user_id
+        print(f"[DEBUG] handle_store_confirmation_yes: user_id={user_id}")
+        
         # 保存された依頼内容を取得
         temp_data = store_temp_data.get(user_id, {})
         date = temp_data.get("date")
-        time = temp_data.get("time")
-        count = temp_data.get("count")
-        count_text = temp_data.get("count_text", "未選択")
-        time_text = temp_data.get("time_text", "未選択")
-        if not date or not time:
+        time_slot = temp_data.get("time_slot")
+        required_count = temp_data.get("required_count")
+        notes = temp_data.get("notes", "")
+        
+        if not date or not time_slot or not required_count:
             response = TextSendMessage(text="依頼内容が見つかりません。最初からやり直してください。")
             store_line_bot_service.line_bot_api.reply_message(event.reply_token, response)
             return
+        
         # 店舗情報を取得
         store = get_store_by_user_id(user_id)
+        if not store:
+            response = TextSendMessage(text="店舗情報の取得に失敗しました。")
+            store_line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+            return
+        
         # シフト依頼を作成・処理
         shift_request = store_schedule_service.create_shift_request(
             store=store,
             target_date=date,
-            time_slot=time,
-            required_count=int(count.split("_")[1]) if count and "_" in count else 1,
-            notes=''
+            time_slot=time_slot,
+            required_count=int(required_count) if isinstance(required_count, str) else required_count,
+            notes=notes
         )
+        
         success = store_schedule_service.process_shift_request(shift_request, store)
+        
         if success:
             response = TextSendMessage(
-                text=f"✅ 依頼を確定しました！\n"
-                     f"依頼ID: {shift_request.id}\n"
-                     f"日付: {date.strftime('%Y/%m/%d')}\n"
-                     f"時間帯: {time_text}\n"
-                     f"人数: {count_text}\n\n"
+                text=f"✅ 依頼を確定しました！\n\n"
+                     f"📅 日付: {date.strftime('%Y/%m/%d')}\n"
+                     f"⏰ 時間帯: {time_slot}\n"
+                     f"👥 人数: {required_count}名\n"
+                     f"📝 備考: {notes or 'なし'}\n\n"
                      f"薬剤師に通知を送信しました。\n"
                      f"応募があったらご連絡いたします。"
             )
@@ -498,13 +528,15 @@ def handle_store_confirmation_yes(event):
             response = TextSendMessage(
                 text=f"⚠️ 依頼を確定しましたが、\n"
                      f"空き薬剤師が見つかりませんでした。\n"
-                     f"依頼ID: {shift_request.id}\n"
                      f"別の日時で再度お試しください。"
             )
+        
         # 一時データをクリア
         if user_id in store_temp_data:
             del store_temp_data[user_id]
+        
         store_line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+        
     except Exception as e:
         logger.error(f"Error handling store confirmation yes: {e}")
         error_response = TextSendMessage(text="確定処理中にエラーが発生しました。")
@@ -536,13 +568,7 @@ def handle_store_confirmation_no(event):
 def handle_store_other_messages(event, message_text: str):
     """店舗のその他のメッセージ処理"""
     try:
-        response = TextSendMessage(
-            text="🏪 店舗ユーザー向けメニュー\n\n"
-                 "以下のコマンドが利用できます：\n\n"
-                 "📋 勤務依頼の送信：\n"
-                 "勤務依頼\n\n"
-                 "何かご不明な点がございましたら、お気軽にお声かけください。"
-        )
+        response = TextSendMessage(text=GUIDE_TEXT)
         
         store_line_bot_service.line_bot_api.reply_message(event.reply_token, response)
         

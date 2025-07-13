@@ -19,6 +19,7 @@ from linebot.models import (
 )
 from dateutil.parser import parse as parse_date
 from fastapi.responses import JSONResponse
+import re
 
 from app.config import settings
 from app.services.line_bot_service import LineBotService
@@ -43,6 +44,22 @@ user_management_service = UserManagementService()
 
 # 一時的な依頼内容保存（実際はRedis/DBを使用）
 temp_requests: Dict[str, Dict[str, Any]] = {}
+
+# --- 案内文統一 ---
+WELCOME_GUIDE = (
+    "\U0001F3E5 薬局シフト管理Botへようこそ！\n\n"
+    "このBotは薬局の勤務シフト管理を効率化します。\n\n"
+    "\U0001F4CB 利用方法を選択してください：\n\n"
+    "\U0001F3EA 【店舗の方】\n"
+    "• 店舗登録がお済みでない方は、\n"
+    "店舗登録、 店舗番号、店舗名を送信してください！\n"
+    "例：店舗登録 002 サンライズ薬局\n\n"
+    "\U0001F48A 【薬剤師の方】\n"
+    "• 登録がお済みでない方は、\n"
+    "お名前、電話番号を送信してください！\n"
+    "例：田中薬剤師,090-1234-5678\n\n"
+    "登録は簡単で、すぐに利用開始できます！"
+)
 
 
 @router.post("/webhook")
@@ -95,26 +112,9 @@ def handle_follow(event):
         # 既存ユーザーか判定
         user_type = user_management_service.get_user_type(user_id)
         if user_type == UserType.UNKNOWN:
-            # 未登録ユーザーのみ案内メッセージを送信
-            welcome_message = TextSendMessage(
-                text="\U0001F3E5 薬局シフト管理Botへようこそ！\n\n"
-                     "このBotは薬局の勤務シフト管理を効率化します。\n\n"
-                     "\U0001F4CB 利用方法を選択してください：\n\n"
-                     "\U0001F3EA 【店舗の方】\n"
-                     "• 店舗登録がお済みでない方は、\n"
-                     "店舗登録、 店舗番号、店舗名を送信してください！\n"
-                     "例：店舗登録 002 サンライズ薬局\n\n"
-                     "\U0001F48A 【薬剤師の方】\n"
-                     "• 登録がお済みでない方は、\n"
-                     "お名前、電話番号を送信してください！\n"
-                     "例：田中薬剤師,090-1234-5678\n\n"
-                     "登録は簡単で、すぐに利用開始できます！"
-            )
-            line_bot_service.line_bot_api.reply_message(
-                event.reply_token,
-                welcome_message
-            )
-            logger.info(f"Sent welcome message to {user_name} ({user_id})")
+            welcome_message = TextSendMessage(text=WELCOME_GUIDE)
+            line_bot_service.line_bot_api.reply_message(event.reply_token, welcome_message)
+            logger.info(f"Sent welcome message to {user_id}")
         else:
             logger.info(f"User {user_id} is already registered. No welcome message sent.")
     except Exception as e:
@@ -134,10 +134,7 @@ def handle_follow(event):
                  "例：田中薬剤師,090-1234-5678\n\n"
                  "登録は簡単で、すぐに利用開始できます！"
         )
-        line_bot_service.line_bot_api.reply_message(
-            event.reply_token,
-            error_message
-        )
+        line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
 
 
 @line_bot_service.handler.add(UnfollowEvent)
@@ -218,11 +215,63 @@ def handle_text_message(event):
         
         # 薬剤師登録処理（詳細情報）
         if message_text.startswith("登録"):
-            if user_type == UserType.UNKNOWN:
-                # 未分類ユーザーの場合は薬剤師として扱う
-                handle_pharmacist_registration(event, message_text)
-            elif user_type == UserType.PHARMACIST:
-                handle_pharmacist_registration(event, message_text)
+            if user_type == UserType.UNKNOWN or user_type == UserType.PHARMACIST:
+                # 柔軟な区切り文字対応
+                parts = re.split(r'[ ,、\u3000]+', message_text)
+                if len(parts) < 4:
+                    help_message = TextSendMessage(
+                        text="📝 登録フォーマットが正しくありません。\n\n"
+                             "正しいフォーマット：\n"
+                             "登録 [名前] [電話番号] [対応可能時間]\n\n"
+                             "例：登録 田中太郎 090-1234-5678 午前,午後\n\n"
+                             "対応可能時間の選択肢：\n"
+                             "• 午前 (9:00-13:00)\n"
+                             "• 午後 (13:00-17:00)\n"
+                             "• 夜間 (17:00-21:00)\n"
+                             "• 終日"
+                    )
+                    line_bot_service.line_bot_api.reply_message(event.reply_token, help_message)
+                    return
+                name = parts[1]
+                phone = parts[2]
+                availability = parts[3:]
+                # ユーザープロフィールを取得
+                profile = line_bot_service.line_bot_api.get_profile(user_id)
+                
+                # 薬剤師情報をGoogle Sheetsに登録
+                pharmacist_data = {
+                    "id": f"pharm_{user_id[-8:]}",  # ユーザーIDの後8文字を使用
+                    "user_id": user_id,
+                    "name": name,
+                    "phone": phone,
+                    "availability": availability,
+                    "rating": 0.0,
+                    "experience_years": 0,
+                    "registered_at": datetime.now().isoformat()
+                }
+                
+                # Google Sheetsに登録
+                success = google_sheets_service.register_pharmacist(pharmacist_data)
+                
+                if success:
+                    confirmation_message = TextSendMessage(
+                        text=f"✅ 薬剤師登録が完了しました！\n\n"
+                             f"📋 登録情報：\n"
+                             f"• 名前: {name}\n"
+                             f"• 電話番号: {phone}\n"
+                             f"• 対応可能時間: {', '.join(availability)}\n\n"
+                             f"これで勤務依頼の通知を受け取ることができます。\n"
+                             f"「勤務依頼」と入力してテストしてみてください。"
+                    )
+                else:
+                    confirmation_message = TextSendMessage(
+                        text="❌ 登録処理中にエラーが発生しました。\n"
+                             "しばらく時間をおいて再度お試しください。"
+                    )
+                
+                line_bot_service.line_bot_api.reply_message(event.reply_token, confirmation_message)
+                
+                logger.info(f"Pharmacist registration completed for {name} ({user_id})")
             else:
                 response = TextSendMessage(
                     text="店舗ユーザーは薬剤師登録できません。\n"
@@ -390,7 +439,7 @@ def handle_postback(event):
 
 def handle_shift_request(event, message_text: str, use_push: bool = False):
     user_id = event.source.user_id
-    print(f"[DEBUG] handle_shift_request: user_id={user_id}")
+    print(f"[DEBUG] handle_shift_request: user_id={user_id}, message_text='{message_text}'")
     store = get_store_by_user_id(user_id)
     print(f"[DEBUG] handle_shift_request: store={store}")
     logger.info(f"[DEBUG] handle_shift_request called with message_text='{message_text}'")
@@ -418,50 +467,25 @@ def handle_shift_request(event, message_text: str, use_push: bool = False):
             return
         logger.info(f"[handle_shift_request] store found: {store}")
         print(f"[handle_shift_request] store found: {store}")
+        # 登録済み店舗ユーザーは何か送ったら即シフト依頼フロー開始
         parsed_data = parse_shift_request(message_text)
-        if not parsed_data:
-            logger.info(f"[handle_shift_request] parse_shift_request failed for user_id={user_id}, message_text={message_text}")
+        if parsed_data:
+            # シフト依頼内容を解析できた場合
+            handle_parsed_shift_request(event, parsed_data, store)
+        else:
+            # 解析できない場合は選択式のフォームを表示
             template = create_shift_request_template()
             if use_push:
                 line_bot_service.line_bot_api.push_message(user_id, template)
             else:
                 line_bot_service.line_bot_api.reply_message(event.reply_token, template)
-            return
-        logger.info(f"[handle_shift_request] parse_shift_request succeeded: {parsed_data}")
-        shift_request = schedule_service.create_shift_request(
-            store=store,
-            target_date=parsed_data["date"],
-            time_slot=parsed_data["time_slot"],
-            required_count=parsed_data["required_count"],
-            notes=parsed_data.get("notes")
-        )
-        logger.info(f"[handle_shift_request] shift_request created: {shift_request}")
-        logger.info(f"[handle_shift_request] calling process_shift_request...")
-        success = schedule_service.process_shift_request(shift_request, store)
-        logger.info(f"[handle_shift_request] process_shift_request result: {success}")
-        if success:
-            response = TextSendMessage(
-                text=f"シフト依頼を受け付けました。\n"
-                     f"日時: {parsed_data['date'].strftime('%m/%d')} {parsed_data['time_slot'].value}\n"
-                     f"人数: {parsed_data['required_count']}名\n"
-                     f"薬剤師に通知しました。"
-            )
-        else:
-            response = TextSendMessage(text="申し訳ございません。空き薬剤師が見つかりませんでした。")
-        if use_push:
-            line_bot_service.line_bot_api.push_message(user_id, response)
-        else:
-            line_bot_service.line_bot_api.reply_message(event.reply_token, response)
     except Exception as e:
-        logger.error(f"Error handling shift request: {e}")
-        try:
-            error_response = TextSendMessage(text="シフト依頼の処理中にエラーが発生しました。")
-            if use_push:
-                line_bot_service.line_bot_api.push_message(user_id, error_response)
-            else:
-                line_bot_service.line_bot_api.reply_message(event.reply_token, error_response)
-        except Exception as push_error:
-            logger.error(f"Error sending error message: {push_error}")
+        logger.error(f"Error in handle_shift_request: {e}")
+        error_response = TextSendMessage(text="シフト依頼処理中にエラーが発生しました。")
+        if use_push:
+            line_bot_service.line_bot_api.push_message(user_id, error_response)
+        else:
+            line_bot_service.line_bot_api.reply_message(event.reply_token, error_response)
 
 
 def handle_registration(event, message_text: str):
@@ -896,97 +920,99 @@ def handle_confirmation_yes(event):
     """依頼内容の確定処理"""
     try:
         user_id = event.source.user_id
-        # 追加: temp_dataのデバッグ出力
         print(f"[DEBUG] handle_confirmation_yes: user_id={user_id}")
         print(f"[DEBUG] temp_data: {user_management_service.get_or_create_session(user_id).temp_data}")
+        
         # 保存された依頼内容を取得
         date = user_management_service.get_temp_data(user_id, "date")
-        start_time = user_management_service.get_temp_data(user_id, "start_time")
-        end_time = user_management_service.get_temp_data(user_id, "end_time")
-        break_time = user_management_service.get_temp_data(user_id, "break_time")
-        count = user_management_service.get_temp_data(user_id, "count")
-        count_text = user_management_service.get_temp_data(user_id, "count_text") or "未選択"
-        def time_label(data, prefix):
-            if not data or not data.startswith(prefix):
-                return "未選択"
-            t = data.replace(prefix, "")
-            if len(t) == 3:
-                return f"{t[0]}:{t[1:]}"
-            elif len(t) == 4:
-                return f"{t[:2]}:{t[2:]}"
-            return t
-        start_time_label = time_label(start_time, "start_time_")
-        end_time_label = time_label(end_time, "end_time_")
-        break_time_mapping = {
-            "break_30": "30分",
-            "break_60": "1時間",
-            "break_90": "1時間30分",
-            "break_120": "2時間"
-        }
-        break_time_label = break_time_mapping.get(break_time, "未選択")
+        time_slot = user_management_service.get_temp_data(user_id, "time_slot")
+        required_count = user_management_service.get_temp_data(user_id, "required_count")
+        notes = user_management_service.get_temp_data(user_id, "notes")
+        
         # 必須項目が揃っているかチェック
-        if not (date and start_time and end_time and break_time and count):
+        if not (date and time_slot and required_count):
             response = TextSendMessage(text="依頼内容が見つかりません。最初からやり直してください。")
             line_bot_service.line_bot_api.reply_message(event.reply_token, response)
             return
+        
         # 依頼IDを生成
         request_id = f"req_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
         # 店舗情報を取得
         store = get_store_by_user_id(user_id)
+        if not store:
+            response = TextSendMessage(text="店舗情報の取得に失敗しました。")
+            line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+            return
+        
         # 依頼内容を保存
         request_data = {
             "date": date,
             "date_text": date.strftime('%Y/%m/%d'),
-            "start_time": start_time,
-            "start_time_label": start_time_label,
-            "end_time": end_time,
-            "end_time_label": end_time_label,
-            "break_time": break_time,
-            "break_time_label": break_time_label,
-            "count": count,
-            "count_text": count_text,
-            "store": store.store_name if store else "不明店舗",
+            "time_slot": time_slot,
+            "required_count": required_count,
+            "notes": notes,
+            "store": store.store_name,
             "store_user_id": user_id
         }
+        
         # 依頼内容をrequest_managerに保存
         request_manager.save_request(request_id, request_data)
         logger.info(f"Confirmed request {request_id} for user {user_id}: {request_data}")
-        # --- ここから空き薬剤師検索・通知処理 ---
-        def get_time_slot(start_label, end_label):
-            try:
-                sh, sm = map(int, start_label.split(":"))
-                eh, em = map(int, end_label.split(":"))
-                if sh >= 8 and eh <= 13:
-                    return "time_morning"
-                elif sh >= 13 and eh <= 19:
-                    return "time_afternoon"
-                elif sh >= 19 and eh <= 22:
-                    return "time_evening"
-                else:
-                    return "time_full_day"
-            except Exception:
-                return "time_full_day"
-        time_slot = get_time_slot(start_time_label, end_time_label)
+        
+        # 空き薬剤師検索・通知処理
         available_pharmacists = google_sheets_service.get_available_pharmacists(date, time_slot)
         logger.info(f"Found {len(available_pharmacists)} available pharmacists for {date} {time_slot}")
-        count_num = 1
-        if count == "count_2":
-            count_num = 2
-        elif count == "count_3_plus":
-            count_num = 3
+        
+        count_num = int(required_count) if isinstance(required_count, str) else required_count
         selected_pharmacists = available_pharmacists[:count_num]
-        notify_result = pharmacist_notification_service.notify_pharmacists_of_request(selected_pharmacists, request_data, request_id)
-        logger.info(f"Pharmacist notification result: {notify_result}")
-        response = TextSendMessage(
-            text=f"依頼を受け付けました！確定次第ご連絡します\n"
-                 f"日付: {date.strftime('%Y/%m/%d')}\n"
-                 f"開始: {start_time_label}\n"
-                 f"終了: {end_time_label}\n"
-                 f"休憩: {break_time_label}\n"
-                 f"人数: {count_text}"
+        
+        notify_result = pharmacist_notification_service.notify_pharmacists_of_request(
+            selected_pharmacists, request_data, request_id
         )
+        logger.info(f"Pharmacist notification result: {notify_result}")
+        
+        # スプレッドシートに書き込み（開始時刻〜終了時刻 薬局名形式）
+        time_slot_mapping = {
+            "time_morning": "9:00-13:00",
+            "time_afternoon": "13:00-17:00", 
+            "time_evening": "17:00-21:00",
+            "time_full_day": "9:00-21:00"
+        }
+        time_range = time_slot_mapping.get(time_slot, time_slot)
+        sheet_entry = f"{time_range} {store.store_name}"
+        
+        # Google Sheetsに記入
+        try:
+            # スプレッドシートに書き込み（開始時刻〜終了時刻 薬局名形式）
+            time_slot_mapping = {
+                "time_morning": "9:00-13:00",
+                "time_afternoon": "13:00-17:00", 
+                "time_evening": "17:00-21:00",
+                "time_full_day": "9:00-21:00"
+            }
+            time_range = time_slot_mapping.get(time_slot, time_slot)
+            sheet_entry = f"{time_range} {store.store_name}"
+            
+            # 簡易的なGoogle Sheets記入（実際の実装では適切なメソッドを使用）
+            logger.info(f"Would add shift request to Google Sheets: {sheet_entry}")
+        except Exception as e:
+            logger.error(f"Error adding to Google Sheets: {e}")
+        
+        response = TextSendMessage(
+            text=f"✅ 依頼を受け付けました！\n\n"
+                 f"📅 日付: {date.strftime('%Y/%m/%d')}\n"
+                 f"⏰ 時間帯: {time_slot}\n"
+                 f"👥 人数: {count_num}名\n"
+                 f"📝 備考: {notes or 'なし'}\n\n"
+                 f"薬剤師に通知を送信しました。\n"
+                 f"応募があったらご連絡いたします。"
+        )
+        
+        # 一時データをクリア
         user_management_service.clear_temp_data(user_id)
         line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+        
     except Exception as e:
         logger.error(f"Error handling confirmation yes: {e}")
         error_response = TextSendMessage(text="確定処理中にエラーが発生しました。")
@@ -1516,22 +1542,14 @@ def handle_other_messages(event, message_text: str):
     """その他のメッセージ処理"""
     try:
         user_id = event.source.user_id
-        guide_text = (
-            "\U0001F3E5 薬局シフト管理Botへようこそ！\n\n"
-            "このBotは薬局の勤務シフト管理を効率化します。\n\n"
-            "\U0001F4CB 利用方法を選択してください：\n\n"
-            "\U0001F3EA 【店舗の方】\n"
-            "• 店舗登録がお済みでない方は、\n"
-            "店舗登録、 店舗番号、店舗名を送信してください！\n"
-            "例：店舗登録 002 サンライズ薬局\n\n"
-            "\U0001F48A 【薬剤師の方】\n"
-            "• 登録がお済みでない方は、\n"
-            "お名前、電話番号を送信してください！\n"
-            "例：田中薬剤師,090-1234-5678\n\n"
-            "登録は簡単で、すぐに利用開始できます！"
-        )
-        response = TextSendMessage(text=guide_text)
-        line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+        session = user_management_service.get_or_create_session(user_id)
+        user_type = session.user_type
+        if user_type == UserType.UNKNOWN:
+            response = TextSendMessage(text=WELCOME_GUIDE)
+            line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+        else:
+            response = TextSendMessage(text="ご質問内容が認識できませんでした。必要な操作を選択してください。")
+            line_bot_service.line_bot_api.reply_message(event.reply_token, response)
     except Exception as e:
         logger.error(f"Error handling other messages: {e}")
         error_message = TextSendMessage(text="申し訳ございません。エラーが発生しました。")
@@ -1611,14 +1629,18 @@ def handle_store_registration_detailed(event, message_text: str):
     """店舗登録詳細処理（番号・店舗名でのuserId自動登録）"""
     try:
         user_id = event.source.user_id
+        print(f"[DEBUG] handle_store_registration_detailed: user_id={user_id}, message_text='{message_text}'")
+        
         # メッセージから番号・店舗名を抽出（例: "店舗登録 001 メイプル薬局"）
         text = message_text.replace("店舗登録", "").strip()
+        
         # 区切り文字を検出（全角スペース、半角スペース）
         separator = None
         if "　" in text:  # 全角スペース
             separator = "　"
         elif " " in text:   # 半角スペース
             separator = " "
+        
         if separator:
             try:
                 parts = [s.strip() for s in text.split(separator)]
@@ -1626,6 +1648,7 @@ def handle_store_registration_detailed(event, message_text: str):
                     store_number = parts[0]
                     store_name = parts[1]
                     logger.info(f"Attempting to register store: number={store_number}, name={store_name}, user_id={user_id}")
+                    
                     # Google Sheetsに店舗userIdを登録（必ず「店舗登録」シートを参照）
                     success = google_sheets_service.register_store_user_id(
                         number=store_number,
@@ -1640,52 +1663,57 @@ def handle_store_registration_detailed(event, message_text: str):
                         
                         # 店舗情報を設定
                         user_management_service.set_user_info(user_id, {
-                            "store_number": store_number,
                             "store_name": store_name,
+                            "store_number": store_number,
                             "registered_at": datetime.now().isoformat()
                         })
                         
+                        # 登録完了メッセージ（push_messageでエラー回避）
                         response = TextSendMessage(
                             text=f"✅ 店舗登録が完了しました！\n\n"
-                                 f"🏪 店舗番号: {store_number}\n"
-                                 f"🏪 店舗名: {store_name}"
+                                 f"🏪 店舗名: {store_name}\n"
+                                 f"📋 店舗番号: {store_number}\n\n"
+                                 f"これで勤務依頼を送信できます。\n"
+                                 f"何かメッセージを送信すると、シフト依頼フローが開始されます。"
                         )
-                        logger.info(f"Successfully registered store user_id for {store_number} {store_name}")
-                        line_bot_service.line_bot_api.reply_message(event.reply_token, response)
-                        # 店舗登録完了後に自動でシフト依頼フローを開始
-                        handle_shift_request(event, "", True)
-                        return
+                        
+                        # push_messageを使用してエラー回避
+                        line_bot_service.line_bot_api.push_message(user_id, response)
+                        
+                        # 自動でシフト依頼フロー開始
+                        handle_shift_request(event, "", use_push=True)
+                        
+                        logger.info(f"Store registration completed for {store_name} ({user_id})")
                     else:
-                        response = TextSendMessage(
-                            text=f"{store_number} {store_name}の登録に失敗しました。店舗番号・店舗名が正しいかご確認ください。"
+                        error_message = TextSendMessage(
+                            text=f"❌ 店舗登録に失敗しました。\n\n"
+                                 f"店舗番号「{store_number}」と店舗名「{store_name}」の組み合わせが\n"
+                                 f"正しいかご確認ください。"
                         )
-                        logger.warning(f"Failed to register store user_id for {store_number} {store_name}")
-                    
-                    line_bot_service.line_bot_api.reply_message(event.reply_token, response)
-                    return
+                        line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
                 else:
-                    raise ValueError("Insufficient parts")
-                    
+                    error_message = TextSendMessage(
+                        text="❌ 店舗登録フォーマットが正しくありません。\n\n"
+                             "正しいフォーマット：\n"
+                             "店舗登録 [店舗番号] [店舗名]\n\n"
+                             "例：店舗登録 002 サンライズ薬局"
+                    )
+                    line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
             except Exception as e:
                 logger.error(f"Error in store registration: {e}")
-                response = TextSendMessage(
-                    text="登録処理中にエラーが発生しました。正しいフォーマットで再度お試しください。\n\n"
-                         "例：店舗登録 001 メイプル薬局"
+                error_message = TextSendMessage(
+                    text="申し訳ございません。店舗登録中にエラーが発生しました。"
                 )
-                line_bot_service.line_bot_api.reply_message(event.reply_token, response)
-                return
-        
-        # フォーマットが正しくない場合の案内
-        help_message = TextSendMessage(
-            text="�� 店舗登録フォーマットが正しくありません。\n\n"
-                 "正しいフォーマット：\n"
-                 "店舗登録 [番号] [店舗名]\n\n"
-                 "例：店舗登録 001 メイプル薬局\n"
-                 "例：店舗登録　001　メイプル薬局\n\n"
-                 "スプレッドシートに登録されている店舗番号・店舗名と完全一致する必要があります。"
-        )
-        line_bot_service.line_bot_api.reply_message(event.reply_token, help_message)
-        
+                line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
+        else:
+            error_message = TextSendMessage(
+                text="❌ 店舗登録フォーマットが正しくありません。\n\n"
+                     "正しいフォーマット：\n"
+                     "店舗登録 [店舗番号] [店舗名]\n\n"
+                     "例：店舗登録 002 サンライズ薬局"
+            )
+            line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
+            
     except Exception as e:
         logger.error(f"Error in store registration detailed: {e}")
         error_message = TextSendMessage(
@@ -1921,3 +1949,30 @@ async def debug_webhook(request: Request):
     body = await request.body()
     print("DEBUG: LINEから受信:", body)
     return JSONResponse(content={"status": "ok"}, status_code=200)
+
+def handle_parsed_shift_request(event, parsed_data, store):
+    """解析済みシフト依頼の処理"""
+    user_id = event.source.user_id
+    print(f"[DEBUG] handle_parsed_shift_request: user_id={user_id}, parsed_data={parsed_data}")
+    try:
+        # 依頼内容を一時保存
+        user_management_service.set_temp_data(user_id, "date", parsed_data["date"])
+        user_management_service.set_temp_data(user_id, "time_slot", parsed_data["time_slot"])
+        user_management_service.set_temp_data(user_id, "required_count", parsed_data["required_count"])
+        user_management_service.set_temp_data(user_id, "notes", parsed_data.get("notes", ""))
+        
+        # 依頼内容確認メッセージを送信
+        response = TextSendMessage(
+            text=f"【依頼内容の確認】\n"
+                 f"日付: {parsed_data['date'].strftime('%Y/%m/%d')}\n"
+                 f"時間帯: {parsed_data['time_slot']}\n"
+                 f"人数: {parsed_data['required_count']}名\n"
+                 f"備考: {parsed_data.get('notes', 'なし')}\n\n"
+                 f"この内容で依頼を送信しますか？\n"
+                 f"「はい」または「いいえ」でお答えください。"
+        )
+        line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+    except Exception as e:
+        logger.error(f"Error in handle_parsed_shift_request: {e}")
+        error_response = TextSendMessage(text="依頼内容の処理中にエラーが発生しました。")
+        line_bot_service.line_bot_api.reply_message(event.reply_token, error_response)

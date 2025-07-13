@@ -14,6 +14,7 @@ from linebot.models import (
 from pharmacist_bot.config import pharmacist_settings
 from shared.services.google_sheets_service import GoogleSheetsService
 from shared.services.request_manager import request_manager
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -61,25 +62,29 @@ pharmacist_line_bot_service = PharmacistLineBotService()
 @pharmacist_line_bot_service.handler.add(MessageEvent, message=TextMessage)
 def handle_pharmacist_message(event):
     text = event.message.text.strip()
-    # 名前・電話番号登録コマンド（例: "名前,電話番号"）
-    if "," in text:
-        name, phone = [s.strip() for s in text.split(",", 1)]
-        user_id = event.source.user_id
-        sheets_service = GoogleSheetsService()
-        success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
-        if success:
-            pharmacist_line_bot_service.reply_message(
-                event.reply_token,
-                TextSendMessage(text=f"{name}さんのLINE IDを自動登録しました。今後はBotから通知が届きます。")
-            )
-            return
-        else:
-            pharmacist_line_bot_service.reply_message(
-                event.reply_token,
-                TextSendMessage(text=f"{name}さんの登録に失敗しました。名前・電話番号が正しいかご確認ください。")
-            )
-            return
-    # コマンド以外は案内メッセージを自動返信
+    user_id = event.source.user_id
+    # 柔軟な区切り文字対応
+    if re.search(r'[ ,、\u3000]', text):
+        parts = re.split(r'[ ,、\u3000]+', text)
+        if len(parts) >= 2:
+            name = parts[0]
+            phone = parts[1]
+            sheets_service = GoogleSheetsService()
+            success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
+            if success:
+                pharmacist_line_bot_service.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=f"{name}さんのLINE IDを自動登録しました。今後はBotから通知が届きます。")
+                )
+                return
+            else:
+                pharmacist_line_bot_service.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=f"{name}さんの登録に失敗しました。名前・電話番号が正しいかご確認ください。")
+                )
+                return
+    # コマンド以外は案内メッセージを自動返信（未登録ユーザーのみ）
+    # ここでユーザー登録判定が必要なら追加
     guide_text = (
         "\U0001F3E5 薬局シフト管理Botへようこそ！\n\n"
         "このBotは薬局の勤務シフト管理を効率化します。\n\n"
