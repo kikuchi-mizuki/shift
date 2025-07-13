@@ -1560,29 +1560,23 @@ def handle_store_registration(event):
     """店舗登録処理"""
     try:
         user_id = event.source.user_id
-        
         # ユーザータイプを店舗に設定
         user_management_service.set_user_type(user_id, UserType.STORE)
-        
         # 店舗情報を設定
+        store_name = "メイプル薬局"
+        store_number = "001"
         user_management_service.set_user_info(user_id, {
-            "store_name": "メイプル薬局",
-            "store_number": "001",
+            "store_name": store_name,
+            "store_number": store_number,
             "registered_at": datetime.now().isoformat()
         })
-        
         response = TextSendMessage(
-            text="✅ 店舗登録が完了しました！\n\n"
-                 "🏪 店舗名: メイプル薬局\n"
-                 "📋 店舗番号: 001\n\n"
-                 "これで勤務依頼を送信できます。\n"
-                 "「勤務依頼」と入力して依頼を開始してください。"
+            text=f"✅ 店舗登録が完了しました！\n\n"
+                 f"🏪 店舗名: {store_name}\n"
+                 f"📋 店舗番号: {store_number}"
         )
-        
         line_bot_service.line_bot_api.reply_message(event.reply_token, response)
-        
         logger.info(f"Store registration completed for user {user_id}")
-        
     except Exception as e:
         logger.error(f"Error in store registration: {e}")
         error_message = TextSendMessage(
@@ -1672,9 +1666,7 @@ def handle_store_registration_detailed(event, message_text: str):
                         response = TextSendMessage(
                             text=f"✅ 店舗登録が完了しました！\n\n"
                                  f"🏪 店舗名: {store_name}\n"
-                                 f"📋 店舗番号: {store_number}\n\n"
-                                 f"これで勤務依頼を送信できます。\n"
-                                 f"何かメッセージを送信すると、シフト依頼フローが開始されます。"
+                                 f"📋 店舗番号: {store_number}"
                         )
                         
                         # push_messageを使用してエラー回避
