@@ -256,6 +256,7 @@ def handle_text_message(event):
                 success = google_sheets_service.register_pharmacist(pharmacist_data)
                 
                 if success:
+                    user_management_service.set_user_type(user_id, UserType.PHARMACIST)
                     confirmation_message = TextSendMessage(
                         text=f"✅ 薬剤師登録が完了しました！\n\n"
                              f"📋 登録情報：\n"
@@ -1557,6 +1558,7 @@ def handle_pharmacist_registration(event, message_text: str):
         success = google_sheets_service.register_pharmacist(pharmacist_data)
         
         if success:
+            user_management_service.set_user_type(user_id, UserType.PHARMACIST)
             confirmation_message = TextSendMessage(
                 text=f"✅ 薬剤師登録が完了しました！\n\n"
                      f"📋 登録情報：\n"
