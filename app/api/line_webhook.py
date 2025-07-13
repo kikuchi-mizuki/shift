@@ -970,6 +970,29 @@ def handle_confirmation_yes(event):
             return
         
         # 依頼内容を保存
+        # start_time_label, end_time_label, break_time_label, count_text を追加
+        start_time_data = user_management_service.get_temp_data(user_id, "start_time")
+        end_time_data = user_management_service.get_temp_data(user_id, "end_time")
+        break_time_data = user_management_service.get_temp_data(user_id, "break_time")
+        def time_label(data, prefix):
+            if not data or not data.startswith(prefix):
+                return "未選択"
+            t = data.replace(prefix, "")
+            if len(t) == 3:
+                return f"{t[0]}:{t[1:]}"
+            elif len(t) == 4:
+                return f"{t[:2]}:{t[2:]}"
+            return t
+        start_time_label = time_label(start_time_data, "start_time_")
+        end_time_label = time_label(end_time_data, "end_time_")
+        break_time_mapping = {
+            "break_30": "30分",
+            "break_60": "1時間",
+            "break_90": "1時間30分",
+            "break_120": "2時間"
+        }
+        break_time_label = break_time_mapping.get(break_time_data, "未選択")
+        count_text = f"{required_count}名"
         request_data = {
             "date": date,
             "date_text": date.strftime('%Y/%m/%d'),
@@ -977,7 +1000,11 @@ def handle_confirmation_yes(event):
             "required_count": required_count,
             "notes": notes,
             "store": store.store_name,
-            "store_user_id": user_id
+            "store_user_id": user_id,
+            "start_time_label": start_time_label,
+            "end_time_label": end_time_label,
+            "break_time_label": break_time_label,
+            "count_text": count_text
         }
         
         # 依頼内容をrequest_managerに保存
