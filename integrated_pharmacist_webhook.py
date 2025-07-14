@@ -12,6 +12,14 @@ from shared.services.google_sheets_service import GoogleSheetsService
 pharmacist_channel_access_token = os.getenv('PHARMACIST_LINE_CHANNEL_ACCESS_TOKEN')
 pharmacist_channel_secret = os.getenv('PHARMACIST_LINE_CHANNEL_SECRET')
 
+print(f"[DEBUG] Pharmacist Bot Config: token_length={len(pharmacist_channel_access_token) if pharmacist_channel_access_token else 0}, secret_length={len(pharmacist_channel_secret) if pharmacist_channel_secret else 0}")
+print(f"[DEBUG] Pharmacist Bot Config: token_exists={pharmacist_channel_access_token is not None}, secret_exists={pharmacist_channel_secret is not None}")
+
+if not pharmacist_channel_access_token:
+    print("[DEBUG] WARNING: PHARMACIST_LINE_CHANNEL_ACCESS_TOKEN is not set!")
+if not pharmacist_channel_secret:
+    print("[DEBUG] WARNING: PHARMACIST_LINE_CHANNEL_SECRET is not set!")
+
 # 薬剤師Bot用のLINE APIクライアントを作成
 pharmacist_line_bot_api = LineBotApi(pharmacist_channel_access_token)
 pharmacist_handler = WebhookHandler(pharmacist_channel_secret)
@@ -22,12 +30,17 @@ logger = logging.getLogger(__name__)
 
 @pharmacist_handler.add(MessageEvent, message=TextMessage)
 def handle_pharmacist_message(event):
+    user_id = event.source.user_id
+    text = event.message.text.strip()
+    
+    print(f"[DEBUG] Pharmacist message received: user_id={user_id}, text='{text}'")
+    logger.info(f"Received pharmacist message from {user_id}: {text}")
+    
     with open("pharmacist_debug.txt", "a", encoding="utf-8") as f:
         f.write(f"handle_pharmacist_message called: {event.message.text}\n")
     
     """薬剤師Bot用のメッセージハンドラー"""
     # メッセージ本文から名前・電話番号を抽出（カンマ区切りまたは全角スペース区切り）
-    text = event.message.text.strip()
     logger.info(f"Received pharmacist message: {text}")
     
     # 柔軟な区切り文字対応
@@ -37,24 +50,26 @@ def handle_pharmacist_message(event):
             name = parts[0]
             phone = parts[1]
             user_id = event.source.user_id
+            print(f"[DEBUG] Processing pharmacist registration: name={name}, phone={phone}, user_id={user_id}")
             logger.info(f"Attempting to register pharmacist: name={name}, phone={phone}, user_id={user_id}")
             
             sheets_service = GoogleSheetsService()
             success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
             
             if success:
-                pharmacist_line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=f"{name}さんのLINE IDを自動登録しました。今後はBotから通知が届きます。")
-                )
+                response = TextSendMessage(text=f"{name}さんのLINE IDを自動登録しました。今後はBotから通知が届きます。")
+                print(f"[DEBUG] Sending registration success to user_id={user_id}")
+                pharmacist_line_bot_api.reply_message(event.reply_token, response)
+                print(f"[DEBUG] Registration success response sent to user_id={user_id}")
                 logger.info(f"Successfully registered pharmacist user_id for {name}")
             else:
-                pharmacist_line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=f"{name}さんの登録に失敗しました。名前・電話番号が正しいかご確認ください。")
-                )
+                response = TextSendMessage(text=f"{name}さんの登録に失敗しました。名前・電話番号が正しいかご確認ください。")
+                print(f"[DEBUG] Sending registration failure to user_id={user_id}")
+                pharmacist_line_bot_api.reply_message(event.reply_token, response)
+                print(f"[DEBUG] Registration failure response sent to user_id={user_id}")
                 logger.warning(f"Failed to register pharmacist user_id for {name}")
             return
+    
     # 通常の応答
     guide_text = (
         "\U0001F3E5 薬局シフト管理Botへようこそ！\n\n"
@@ -70,17 +85,33 @@ def handle_pharmacist_message(event):
         "例：田中薬剤師,090-1234-5678\n\n"
         "登録は簡単で、すぐに利用開始できます！"
     )
-    pharmacist_line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=guide_text)
-    )
+    
+    print(f"[DEBUG] Sending guide message to user_id={user_id}")
+    response = TextSendMessage(text=guide_text)
+    pharmacist_line_bot_api.reply_message(event.reply_token, response)
+    print(f"[DEBUG] Guide message sent to user_id={user_id}")
 
 @router.post("/webhook")
 async def pharmacist_line_webhook(request: Request):
-    body = await request.body()
-    signature = request.headers.get('X-Line-Signature', '')
     try:
-        pharmacist_handler.handle(body.decode('utf-8'), signature)
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
-    return {"status": "ok"} 
+        body = await request.body()
+        signature = request.headers.get('X-Line-Signature', '')
+        
+        print(f"[DEBUG] Pharmacist webhook received: body_length={len(body)}, signature={signature[:20] if signature else 'None'}...")
+        logger.info(f"Pharmacist webhook received: body_length={len(body)}")
+        
+        try:
+            pharmacist_handler.handle(body.decode('utf-8'), signature)
+            print(f"[DEBUG] Pharmacist webhook processed successfully")
+            logger.info("Pharmacist webhook processed successfully")
+        except InvalidSignatureError:
+            logger.error("Invalid signature for pharmacist webhook")
+            print(f"[DEBUG] Invalid signature error for pharmacist webhook")
+            raise HTTPException(status_code=400, detail="Invalid signature")
+        
+        return {"status": "ok"}
+        
+    except Exception as e:
+        logger.error(f"Pharmacist webhook error: {e}")
+        print(f"[DEBUG] Pharmacist webhook error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error") 
