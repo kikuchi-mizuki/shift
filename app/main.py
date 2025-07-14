@@ -9,6 +9,9 @@ from app.config import settings
 from app.api.line_webhook import router as line_webhook_router
 from app.api.schedule import router as schedule_router
 
+# 薬剤師Bot用のインポート
+from integrated_pharmacist_webhook import router as pharmacist_webhook_router
+
 # ログ設定
 logging.basicConfig(
     level=logging.INFO,
@@ -32,8 +35,9 @@ app.add_middleware(
 )
 
 # ルーターの追加
-app.include_router(line_webhook_router)
+app.include_router(line_webhook_router)  # 店舗Bot: /line/webhook
 app.include_router(schedule_router)
+app.include_router(pharmacist_webhook_router)  # 薬剤師Bot: /pharmacist/line/webhook
 
 
 @app.get("/")
@@ -42,7 +46,11 @@ async def root():
     return {
         "message": "フリーランス薬剤師シフト調整自動化システム",
         "version": "1.0.0",
-        "status": "running"
+        "status": "running",
+        "endpoints": {
+            "store_bot": "/line/webhook",
+            "pharmacist_bot": "/pharmacist/line/webhook"
+        }
     }
 
 

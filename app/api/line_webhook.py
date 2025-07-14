@@ -70,20 +70,28 @@ async def line_webhook(request: Request):
         body = await request.body()
         signature = request.headers.get('X-Line-Signature', '')
         
+        print(f"[DEBUG] Store webhook received: body_length={len(body)}, signature={signature[:20]}...")
+        logger.info(f"Store webhook received: body_length={len(body)}")
+        
         # 署名を検証
         try:
             line_bot_service.handler.handle(body.decode('utf-8'), signature)
+            print(f"[DEBUG] Store webhook processed successfully")
+            logger.info("Store webhook processed successfully")
         except InvalidSignatureError:
             logger.error("Invalid signature")
+            print(f"[DEBUG] Invalid signature error")
             raise HTTPException(status_code=400, detail="Invalid signature")
         
         return {"status": "ok"}
         
     except Exception as e:
         logger.error(f"Webhook error: {e}")
+        print(f"[DEBUG] Webhook error: {e}")
         # LINE Bot APIのエラーは通常のHTTPエラーとして扱わない
         if "Invalid reply token" in str(e) or "must be non-empty text" in str(e):
             logger.warning(f"LINE Bot API error (non-critical): {e}")
+            print(f"[DEBUG] LINE Bot API error (non-critical): {e}")
             return {"status": "ok"}
         else:
             raise HTTPException(status_code=500, detail="Internal server error")
@@ -1426,118 +1434,26 @@ def handle_test_commands(event, message_text: str):
     """テスト用コマンドの処理"""
     try:
         user_id = event.source.user_id
+        print(f"[DEBUG] handle_test_commands: user_id={user_id}, message_text='{message_text}'")
         
-        if message_text == "テスト応募":
-            # テスト用の応募処理をシミュレート
-            test_request_id = "test_req_001"
-            test_pharmacist_name = "テスト薬剤師"
-            
-            result = pharmacist_notification_service.handle_pharmacist_response(
-                user_id, 
-                test_pharmacist_name, 
-                "apply", 
-                test_request_id
-            )
-            
-            if result["success"]:
-                response = TextSendMessage(
-                    text=f"✅ テスト応募処理が完了しました！\n"
-                         f"依頼ID: {test_request_id}\n"
-                         f"薬剤師: {test_pharmacist_name}\n"
-                         f"結果: {result.get('message', '成功')}"
-                )
-            else:
-                response = TextSendMessage(
-                    text=f"❌ テスト応募処理でエラーが発生しました。\n"
-                         f"エラー: {result.get('error', '不明')}"
-                )
-            
-            line_bot_service.line_bot_api.reply_message(event.reply_token, response)
-            return
-            
-        elif message_text == "テスト辞退":
-            # テスト用の辞退処理をシミュレート
-            test_request_id = "test_req_002"
-            test_pharmacist_name = "テスト薬剤師"
-            
-            result = pharmacist_notification_service.handle_pharmacist_response(
-                user_id, 
-                test_pharmacist_name, 
-                "decline", 
-                test_request_id
-            )
-            
-            if result["success"]:
-                response = TextSendMessage(
-                    text=f"✅ テスト辞退処理が完了しました！\n"
-                         f"依頼ID: {test_request_id}\n"
-                         f"薬剤師: {test_pharmacist_name}\n"
-                         f"結果: {result.get('message', '成功')}"
-                )
-            else:
-                response = TextSendMessage(
-                    text=f"❌ テスト辞退処理でエラーが発生しました。\n"
-                         f"エラー: {result.get('error', '不明')}"
-                )
-            
-            line_bot_service.line_bot_api.reply_message(event.reply_token, response)
-            return
-            
-        elif message_text == "テスト詳細":
-            # テスト用の詳細確認処理をシミュレート
-            test_request_id = "test_req_003"
-            test_pharmacist_name = "テスト薬剤師"
-            
-            result = pharmacist_notification_service.handle_pharmacist_response(
-                user_id, 
-                test_pharmacist_name, 
-                "details", 
-                test_request_id
-            )
-            
-            if result["success"]:
-                response = TextSendMessage(
-                    text=f"✅ テスト詳細確認処理が完了しました！\n"
-                         f"依頼ID: {test_request_id}\n"
-                         f"薬剤師: {test_pharmacist_name}\n"
-                         f"結果: {result.get('message', '成功')}"
-                )
-            else:
-                response = TextSendMessage(
-                    text=f"❌ テスト詳細確認処理でエラーが発生しました。\n"
-                         f"エラー: {result.get('error', '不明')}"
-                )
-            
-            line_bot_service.line_bot_api.reply_message(event.reply_token, response)
-            return
-            
-        elif message_text == "テストヘルプ":
-            # テストコマンドのヘルプを表示
+        if message_text == "テスト":
             response = TextSendMessage(
-                text="🧪 テストコマンド一覧\n"
-                     "━━━━━━━━━━━━━━━━━━━━\n"
-                     "「テスト応募」: 応募処理のテスト\n"
-                     "「テスト辞退」: 辞退処理のテスト\n"
-                     "「テスト詳細」: 詳細確認処理のテスト\n"
-                     "「テストヘルプ」: このヘルプを表示\n"
-                     "━━━━━━━━━━━━━━━━━━━━\n"
-                     "実際のボタンクリックもテストできます。"
+                text="✅ テストメッセージです！\n\n"
+                     "Botが正常に動作しています。\n"
+                     "店舗登録や薬剤師登録をお試しください。"
             )
+            print(f"[DEBUG] Sending test response to user_id={user_id}")
             line_bot_service.line_bot_api.reply_message(event.reply_token, response)
-            return
-            
+            print(f"[DEBUG] Test response sent successfully to user_id={user_id}")
         else:
-            # 不明なテストコマンド
-            response = TextSendMessage(
-                text="❓ 不明なテストコマンドです。\n"
-                     "「テストヘルプ」で利用可能なコマンドを確認してください。"
-            )
+            response = TextSendMessage(text="テストコマンドが認識されませんでした。")
+            print(f"[DEBUG] Sending unknown test command response to user_id={user_id}")
             line_bot_service.line_bot_api.reply_message(event.reply_token, response)
-            return
             
     except Exception as e:
-        logger.error(f"Error handling test command: {e}")
-        error_response = TextSendMessage(text="テストコマンドの処理中にエラーが発生しました。")
+        logger.error(f"Error in test commands: {e}")
+        print(f"[DEBUG] Error in test commands: {e}")
+        error_response = TextSendMessage(text="テストコマンド処理中にエラーが発生しました。")
         line_bot_service.line_bot_api.reply_message(event.reply_token, error_response)
 
 
