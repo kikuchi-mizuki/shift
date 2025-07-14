@@ -161,6 +161,12 @@ def handle_text_message(event):
     user_type = session.user_type
     print(f"[DEBUG] handle_text_message: user_id={user_id}, user_type={user_type}")
     print(f"get_temp_data check: user_id={user_id}, key=custom_date_waiting, value={user_management_service.get_temp_data(user_id, 'custom_date_waiting')}")
+    
+    # デバッグ: メッセージ内容をログ出力
+    message_text = event.message.text
+    print(f"[DEBUG] Received message: '{message_text}' from user_id={user_id}")
+    logger.info(f"Received text message from {user_id}: {message_text}")
+    
     # カスタム日付入力待ちの場合は最優先で処理
     if user_management_service.get_temp_data(user_id, "custom_date_waiting"):
         try:
@@ -172,12 +178,14 @@ def handle_text_message(event):
             # 次のステップへ
             messages = handle_start_time_period_selection(event)
             if messages:
+                print(f"[DEBUG] Sending custom date response to user_id={user_id}")
                 line_bot_service.line_bot_api.reply_message(event.reply_token, messages[0])
                 for m in messages[1:]:
                     line_bot_service.line_bot_api.push_message(user_id, m)
             return
         except Exception:
             response = TextSendMessage(text="日付の形式が正しくありません。例: 4/15, 4月15日, 2024/4/15")
+            print(f"[DEBUG] Sending date format error to user_id={user_id}")
             line_bot_service.line_bot_api.reply_message(event.reply_token, response)
             return
     try:
@@ -203,21 +211,25 @@ def handle_text_message(event):
         
         # ユーザータイプ登録処理
         if message_text == "店舗登録":
+            print(f"[DEBUG] Processing store registration for user_id={user_id}")
             handle_store_registration(event)
             return
         
         # 店舗登録処理（詳細情報）
         if message_text.startswith("店舗登録"):
+            print(f"[DEBUG] Processing detailed store registration for user_id={user_id}")
             handle_store_registration_detailed(event, message_text)
             return
         
         if message_text == "薬剤師登録":
+            print(f"[DEBUG] Processing pharmacist registration prompt for user_id={user_id}")
             handle_pharmacist_registration_prompt(event)
             return
         
         # 薬剤師登録処理（詳細情報）
         if message_text.startswith("登録"):
             if user_type == UserType.UNKNOWN or user_type == UserType.PHARMACIST:
+                print(f"[DEBUG] Processing pharmacist registration for user_id={user_id}")
                 # 柔軟な区切り文字対応
                 parts = re.split(r'[ ,、\u3000]+', message_text)
                 if len(parts) < 4:
@@ -232,6 +244,7 @@ def handle_text_message(event):
                              "• 夜間 (17:00-21:00)\n"
                              "• 終日"
                     )
+                    print(f"[DEBUG] Sending registration help to user_id={user_id}")
                     line_bot_service.line_bot_api.reply_message(event.reply_token, help_message)
                     return
                 name = parts[1]
@@ -266,6 +279,7 @@ def handle_text_message(event):
                              f"これで勤務依頼の通知を受け取ることができます。\n"
                              f"「勤務依頼」と入力してテストしてみてください。"
                     )
+                    print(f"[DEBUG] Sending pharmacist registration success to user_id={user_id}")
                     line_bot_service.line_bot_api.reply_message(event.reply_token, confirmation_message)
                     # push_messageでも必ず通知
                     line_bot_service.line_bot_api.push_message(user_id, confirmation_message)
@@ -280,11 +294,13 @@ def handle_text_message(event):
                 line_bot_service.line_bot_api.reply_message(event.reply_token, confirmation_message)
                 
                 logger.info(f"Pharmacist registration completed for {name} ({user_id})")
+                return
             else:
                 response = TextSendMessage(
                     text="店舗ユーザーは薬剤師登録できません。\n"
                          "勤務依頼の送信のみ可能です。"
                 )
+                print(f"[DEBUG] Sending store user error to user_id={user_id}")
                 line_bot_service.line_bot_api.reply_message(event.reply_token, response)
             return
 
@@ -296,21 +312,26 @@ def handle_text_message(event):
 
         # 登録済み店舗ユーザーは何か送ったら即シフト依頼
         if user_type == UserType.STORE:
+            print(f"[DEBUG] Processing shift request for store user_id={user_id}")
             handle_shift_request(event, message_text)
             return
 
         # 従来の勤務依頼ワード判定・薬剤師ユーザー向け分岐は不要になる
         # その他のメッセージ
+        print(f"[DEBUG] Processing other messages for user_id={user_id}")
         handle_other_messages(event, message_text)
         
     except Exception as e:
         logger.error(f"Error handling text message: {e}")
+        print(f"[DEBUG] Error in handle_text_message: {e}")
         # 既にreply_messageが呼ばれている可能性があるため、push_messageを使用
         try:
             error_message = TextSendMessage(text="申し訳ございません。エラーが発生しました。")
+            print(f"[DEBUG] Sending error message to user_id={user_id}")
             line_bot_service.line_bot_api.push_message(event.source.user_id, error_message)
         except Exception as push_error:
             logger.error(f"Error sending error message: {push_error}")
+            print(f"[DEBUG] Error sending error message: {push_error}")
 
 
 @line_bot_service.handler.add(PostbackEvent)
@@ -468,6 +489,7 @@ def handle_shift_request(event, message_text: str, use_push: bool = False):
                      "→ 「薬剤師登録」と入力\n\n"
                      "どちらを選択されますか？"
             )
+            print(f"[DEBUG] Sending store registration prompt to user_id={user_id}")
             if use_push:
                 line_bot_service.line_bot_api.push_message(user_id, response)
             else:
@@ -479,9 +501,11 @@ def handle_shift_request(event, message_text: str, use_push: bool = False):
         parsed_data = parse_shift_request(message_text)
         if parsed_data:
             # シフト依頼内容を解析できた場合
+            print(f"[DEBUG] Parsed shift request data: {parsed_data}")
             handle_parsed_shift_request(event, parsed_data, store)
         else:
             # 解析できない場合は選択式のフォームを表示
+            print(f"[DEBUG] Showing shift request template to user_id={user_id}")
             template = create_shift_request_template()
             if use_push:
                 line_bot_service.line_bot_api.push_message(user_id, template)
@@ -489,6 +513,7 @@ def handle_shift_request(event, message_text: str, use_push: bool = False):
                 line_bot_service.line_bot_api.reply_message(event.reply_token, template)
     except Exception as e:
         logger.error(f"Error in handle_shift_request: {e}")
+        print(f"[DEBUG] Error in handle_shift_request: {e}")
         error_response = TextSendMessage(text="シフト依頼処理中にエラーが発生しました。")
         if use_push:
             line_bot_service.line_bot_api.push_message(user_id, error_response)
@@ -1603,13 +1628,21 @@ def handle_other_messages(event, message_text: str):
         user_id = event.source.user_id
         session = user_management_service.get_or_create_session(user_id)
         user_type = session.user_type
+        print(f"[DEBUG] handle_other_messages: user_id={user_id}, user_type={user_type}")
+        
         if user_type == UserType.UNKNOWN:
             response = TextSendMessage(text=WELCOME_GUIDE)
+            print(f"[DEBUG] Sending welcome guide to unknown user_id={user_id}")
         else:
             response = TextSendMessage(text="シフト依頼があったら、今後はBotから通知が届きます！")
+            print(f"[DEBUG] Sending notification guide to registered user_id={user_id}")
+        
         line_bot_service.line_bot_api.reply_message(event.reply_token, response)
+        print(f"[DEBUG] Reply message sent to user_id={user_id}")
+        
     except Exception as e:
         logger.error(f"Error handling other messages: {e}")
+        print(f"[DEBUG] Error in handle_other_messages: {e}")
         error_message = TextSendMessage(text="申し訳ございません。エラーが発生しました。")
         line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
 
