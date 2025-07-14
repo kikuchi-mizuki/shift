@@ -5,6 +5,7 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import os
 import logging
 import re
+from datetime import datetime
 
 from shared.services.google_sheets_service import GoogleSheetsService
 
@@ -28,16 +29,20 @@ router = APIRouter(prefix="/pharmacist/line", tags=["pharmacist_line"])
 
 logger = logging.getLogger(__name__)
 
+def log_debug(message):
+    """デバッグログをファイルに書き込む"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open("pharmacist_debug.txt", "a", encoding="utf-8") as f:
+        f.write(f"[{timestamp}] {message}\n")
+    print(f"[DEBUG] {message}")
+
 @pharmacist_handler.add(MessageEvent, message=TextMessage)
 def handle_pharmacist_message(event):
     user_id = event.source.user_id
     text = event.message.text.strip()
     
-    print(f"[DEBUG] Pharmacist message received: user_id={user_id}, text='{text}'")
+    log_debug(f"Pharmacist message received: user_id={user_id}, text='{text}'")
     logger.info(f"Received pharmacist message from {user_id}: {text}")
-    
-    with open("pharmacist_debug.txt", "a", encoding="utf-8") as f:
-        f.write(f"handle_pharmacist_message called: {event.message.text}\n")
     
     """薬剤師Bot用のメッセージハンドラー"""
     # メッセージ本文から名前・電話番号を抽出（カンマ区切りまたは全角スペース区切り）
@@ -46,29 +51,45 @@ def handle_pharmacist_message(event):
     # 柔軟な区切り文字対応
     if re.search(r'[ ,、\u3000]', text):
         parts = re.split(r'[ ,、\u3000]+', text)
+        log_debug(f"Parsed parts: {parts}")
+        
         if len(parts) >= 2:
             name = parts[0]
             phone = parts[1]
             user_id = event.source.user_id
-            print(f"[DEBUG] Processing pharmacist registration: name={name}, phone={phone}, user_id={user_id}")
+            
+            log_debug(f"Processing pharmacist registration: name='{name}', phone='{phone}', user_id='{user_id}'")
             logger.info(f"Attempting to register pharmacist: name={name}, phone={phone}, user_id={user_id}")
             
-            sheets_service = GoogleSheetsService()
-            success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
-            
-            if success:
-                response = TextSendMessage(text=f"{name}さんのLINE IDを自動登録しました。今後はBotから通知が届きます。")
-                print(f"[DEBUG] Sending registration success to user_id={user_id}")
+            try:
+                sheets_service = GoogleSheetsService()
+                log_debug(f"GoogleSheetsService initialized successfully")
+                
+                success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
+                log_debug(f"Registration result: success={success}")
+                
+                if success:
+                    response = TextSendMessage(text=f"{name}さんのLINE IDを自動登録しました。今後はBotから通知が届きます。")
+                    log_debug(f"Sending registration success message to user_id={user_id}")
+                    pharmacist_line_bot_api.reply_message(event.reply_token, response)
+                    log_debug(f"Registration success response sent successfully to user_id={user_id}")
+                    logger.info(f"Successfully registered pharmacist user_id for {name}")
+                else:
+                    response = TextSendMessage(text=f"{name}さんの登録に失敗しました。名前・電話番号が正しいかご確認ください。")
+                    log_debug(f"Sending registration failure message to user_id={user_id}")
+                    pharmacist_line_bot_api.reply_message(event.reply_token, response)
+                    log_debug(f"Registration failure response sent successfully to user_id={user_id}")
+                    logger.warning(f"Failed to register pharmacist user_id for {name}")
+            except Exception as e:
+                error_msg = f"Exception during registration: {str(e)}"
+                log_debug(error_msg)
+                logger.error(error_msg)
+                
+                response = TextSendMessage(text=f"登録処理中にエラーが発生しました。しばらく時間をおいて再度お試しください。")
                 pharmacist_line_bot_api.reply_message(event.reply_token, response)
-                print(f"[DEBUG] Registration success response sent to user_id={user_id}")
-                logger.info(f"Successfully registered pharmacist user_id for {name}")
-            else:
-                response = TextSendMessage(text=f"{name}さんの登録に失敗しました。名前・電話番号が正しいかご確認ください。")
-                print(f"[DEBUG] Sending registration failure to user_id={user_id}")
-                pharmacist_line_bot_api.reply_message(event.reply_token, response)
-                print(f"[DEBUG] Registration failure response sent to user_id={user_id}")
-                logger.warning(f"Failed to register pharmacist user_id for {name}")
             return
+        else:
+            log_debug(f"Insufficient parts for registration: {parts}")
     
     # 通常の応答
     guide_text = (
@@ -86,10 +107,10 @@ def handle_pharmacist_message(event):
         "登録は簡単で、すぐに利用開始できます！"
     )
     
-    print(f"[DEBUG] Sending guide message to user_id={user_id}")
+    log_debug(f"Sending guide message to user_id={user_id}")
     response = TextSendMessage(text=guide_text)
     pharmacist_line_bot_api.reply_message(event.reply_token, response)
-    print(f"[DEBUG] Guide message sent to user_id={user_id}")
+    log_debug(f"Guide message sent successfully to user_id={user_id}")
 
 @router.post("/webhook")
 async def pharmacist_line_webhook(request: Request):
@@ -97,21 +118,23 @@ async def pharmacist_line_webhook(request: Request):
         body = await request.body()
         signature = request.headers.get('X-Line-Signature', '')
         
-        print(f"[DEBUG] Pharmacist webhook received: body_length={len(body)}, signature={signature[:20] if signature else 'None'}...")
+        log_debug(f"Pharmacist webhook received: body_length={len(body)}, signature={signature[:20] if signature else 'None'}...")
         logger.info(f"Pharmacist webhook received: body_length={len(body)}")
         
         try:
             pharmacist_handler.handle(body.decode('utf-8'), signature)
-            print(f"[DEBUG] Pharmacist webhook processed successfully")
+            log_debug(f"Pharmacist webhook processed successfully")
             logger.info("Pharmacist webhook processed successfully")
         except InvalidSignatureError:
-            logger.error("Invalid signature for pharmacist webhook")
-            print(f"[DEBUG] Invalid signature error for pharmacist webhook")
+            error_msg = "Invalid signature for pharmacist webhook"
+            log_debug(error_msg)
+            logger.error(error_msg)
             raise HTTPException(status_code=400, detail="Invalid signature")
         
         return {"status": "ok"}
         
     except Exception as e:
-        logger.error(f"Pharmacist webhook error: {e}")
-        print(f"[DEBUG] Pharmacist webhook error: {e}")
+        error_msg = f"Pharmacist webhook error: {e}"
+        log_debug(error_msg)
+        logger.error(error_msg)
         raise HTTPException(status_code=500, detail="Internal server error") 

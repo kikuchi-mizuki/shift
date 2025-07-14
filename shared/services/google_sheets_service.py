@@ -509,35 +509,61 @@ class GoogleSheetsService:
         sheet_nameを省略した場合は今月のシート名を自動で使用
         """
         try:
+            logger.info(f"Starting pharmacist user_id registration: name='{name}', phone='{phone}', user_id='{user_id}'")
+            
             if not self.service:
                 logger.warning("Google Sheets service not available, skipping user_id registration")
                 return False
+                
             if not sheet_name:
                 today = datetime.now().date()
                 sheet_name = self.get_sheet_name(today)
+                logger.info(f"Using auto-generated sheet_name: {sheet_name}")
+            else:
+                logger.info(f"Using provided sheet_name: {sheet_name}")
+                
             # 薬剤師リストを取得
+            logger.info(f"Fetching pharmacist list from sheet: {sheet_name}")
             pharmacists = self._get_pharmacist_list(sheet_name)
+            logger.info(f"Found {len(pharmacists)} pharmacists in sheet")
+            
+            # デバッグ用：薬剤師リストの内容をログ出力
+            for i, pharm in enumerate(pharmacists[:5]):  # 最初の5件のみ
+                logger.info(f"Pharmacist {i+1}: name='{pharm.get('name', 'N/A')}', phone='{pharm.get('phone', 'N/A')}', user_id='{pharm.get('user_id', 'N/A')}'")
+            
             target_row = None
             for pharmacist in pharmacists:
+                logger.info(f"Checking pharmacist: name='{pharmacist.get('name', 'N/A')}' vs '{name}', phone='{pharmacist.get('phone', 'N/A')}' vs '{phone}'")
                 if pharmacist["name"] == name and pharmacist["phone"] == phone:
                     target_row = pharmacist["row_number"]
+                    logger.info(f"Found matching pharmacist at row {target_row}")
                     break
+                    
             if not target_row:
-                logger.warning(f"Pharmacist not found for name={name}, phone={phone} in sheet {sheet_name}")
+                logger.warning(f"Pharmacist not found for name='{name}', phone='{phone}' in sheet {sheet_name}")
+                pharmacist_info = [f"{p.get('name', 'N/A')}({p.get('phone', 'N/A')})" for p in pharmacists]
+                logger.warning(f"Available pharmacists: {pharmacist_info}")
                 return False
+                
             # user_idを書き込む（B列: 2列目）
             range_name = f"{sheet_name}!B{target_row}"
             body = {'values': [[user_id]]}
+            logger.info(f"Updating range: {range_name} with user_id: {user_id}")
+            
             result = self.service.spreadsheets().values().update(
                 spreadsheetId=self.spreadsheet_id,
                 range=range_name,
                 valueInputOption='RAW',
                 body=body
             ).execute()
-            logger.info(f"Registered user_id for pharmacist {name} ({phone}) at row {target_row}: {user_id}")
+            
+            logger.info(f"Successfully registered user_id for pharmacist {name} ({phone}) at row {target_row}: {user_id}")
+            logger.info(f"Google Sheets API response: {result}")
             return True
+            
         except Exception as e:
             logger.error(f"Error registering pharmacist user_id: {e}")
+            logger.error(f"Exception details: {type(e).__name__}: {str(e)}")
             return False
 
     def get_store_list(self, sheet_name: str = "店舗登録") -> List[Dict[str, Any]]:
