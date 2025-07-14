@@ -45,6 +45,44 @@ def handle_pharmacist_message(event):
     logger.info(f"Received pharmacist message from {user_id}: {text}")
     
     """薬剤師Bot用のメッセージハンドラー"""
+    # まず、ユーザーが既に登録されているかチェック
+    try:
+        sheets_service = GoogleSheetsService()
+        log_debug(f"Checking if user {user_id} is already registered")
+        
+        # 薬剤師リストからユーザーを検索
+        today = datetime.now().date()
+        sheet_name = sheets_service.get_sheet_name(today)
+        pharmacists = sheets_service._get_pharmacist_list(sheet_name)
+        
+        registered_user = None
+        for pharmacist in pharmacists:
+            if pharmacist.get("user_id") == user_id:
+                registered_user = pharmacist
+                break
+        
+        if registered_user:
+            log_debug(f"User {user_id} is already registered as pharmacist: {registered_user.get('name')}")
+            # 登録済みユーザーへのメッセージ
+            registered_text = (
+                f"✅ {registered_user.get('name')}さん、お疲れ様です！\n\n"
+                "既に薬剤師として登録済みです。\n\n"
+                "📋 利用可能な機能：\n"
+                "• シフト通知の受信\n"
+                "• 勤務状況の確認\n"
+                "• シフト申請の受信\n\n"
+                "何かご質問がございましたら、お気軽にお声かけください。"
+            )
+            log_debug(f"Sending registered user message to user_id={user_id}")
+            response = TextSendMessage(text=registered_text)
+            pharmacist_line_bot_api.reply_message(event.reply_token, response)
+            log_debug(f"Registered user message sent successfully to user_id={user_id}")
+            return
+            
+    except Exception as e:
+        log_debug(f"Error checking user registration: {str(e)}")
+        # エラーが発生した場合は通常の処理を続行
+    
     # メッセージ本文から名前・電話番号を抽出（カンマ区切りまたは全角スペース区切り）
     logger.info(f"Received pharmacist message: {text}")
     
@@ -91,7 +129,7 @@ def handle_pharmacist_message(event):
         else:
             log_debug(f"Insufficient parts for registration: {parts}")
     
-    # 通常の応答
+    # 未登録ユーザーへの案内メッセージ
     guide_text = (
         "\U0001F3E5 薬局シフト管理Botへようこそ！\n\n"
         "このBotは薬局の勤務シフト管理を効率化します。\n\n"
