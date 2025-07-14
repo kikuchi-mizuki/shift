@@ -1411,7 +1411,7 @@ def handle_debug_commands(event, message_text: str):
                 response_text += f"日付: {req_data.get('date_text', '不明')}\n"
                 response_text += f"時間: {req_data.get('start_time_label', '不明')}〜{req_data.get('end_time_label', '不明')}\n"
                 response_text += f"ステータス: {req_data.get('status', '不明')}\n"
-                response_text += "━━━━━━━━━━━━━━━━━━━━\n"
+                response_text += "━━━━━━\n"
         else:
             response_text = "📋 保存された依頼はありません"
         

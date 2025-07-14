@@ -126,14 +126,14 @@ class PharmacistNotificationService:
         store_name = request_data.get("store", "不明店舗")
         
         details = f"📋 勤務依頼の詳細\n"
-        details += f"━━━━━━━━━━━━━━━━━━━━\n"
+        details += f"━━━━━━\n"
         details += f"🏪 店舗: {store_name}\n"
         details += f"📅 日付: {date_str}\n"
         details += f"⏰ 開始時間: {start_time_label}\n"
         details += f"⏰ 終了時間: {end_time_label}\n"
         details += f"☕ 休憩時間: {break_time_label}\n"
         details += f"👥 必要人数: {count_text}\n"
-        details += f"━━━━━━━━━━━━━━━━━━━━\n"
+        details += f"━━━━━━\n"
         details += f"この依頼に応募しますか？"
         
         return details
