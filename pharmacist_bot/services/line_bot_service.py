@@ -104,41 +104,13 @@ def handle_pharmacist_message(event):
 
 @pharmacist_line_bot_service.handler.add(PostbackEvent)
 def handle_pharmacist_postback(event):
-    """薬剤師Botのポストバックイベント処理（ボタンクリックなど）"""
+    """薬剤師Botのポストバックイベント処理（無効化バージョン）"""
     print(f"[DEBUG] handle_pharmacist_postback called with data: {event.postback.data}")
     try:
-        user_id = event.source.user_id
-        postback_data = event.postback.data
-        
-        logger.info(f"Received pharmacist postback from {user_id}: {postback_data}")
-        
-        # ポストバックデータを解析
-        if postback_data.startswith("pharmacist_apply:"):
-            print(f"[DEBUG] Calling handle_pharmacist_apply with data: {postback_data}")
-            handle_pharmacist_apply(event, postback_data)
-        elif postback_data.startswith("apply:"):
-            print(f"[DEBUG] Calling handle_pharmacist_apply with data: {postback_data}")
-            handle_pharmacist_apply(event, postback_data)
-        elif postback_data.startswith("pharmacist_decline:"):
-            print(f"[DEBUG] Calling handle_pharmacist_decline with data: {postback_data}")
-            handle_pharmacist_decline(event, postback_data)
-        elif postback_data.startswith("decline:"):
-            print(f"[DEBUG] Calling handle_pharmacist_decline with data: {postback_data}")
-            handle_pharmacist_decline(event, postback_data)
-        elif postback_data.startswith("pharmacist_details:"):
-            print(f"[DEBUG] Calling handle_pharmacist_details with data: {postback_data}")
-            handle_pharmacist_details(event, postback_data)
-        elif postback_data.startswith("details:"):
-            print(f"[DEBUG] Calling handle_pharmacist_details with data: {postback_data}")
-            handle_pharmacist_details(event, postback_data)
-        else:
-            print(f"[DEBUG] Unknown pharmacist postback data: {postback_data}")
-            logger.warning(f"Unknown pharmacist postback data: {postback_data}")
-            pharmacist_line_bot_service.reply_message(
-                event.reply_token,
-                TextSendMessage(text="不明なボタン操作です。")
-            )
-            
+        pharmacist_line_bot_service.reply_message(
+            event.reply_token,
+            TextSendMessage(text="このボタンは現在ご利用いただけません。最新のBotからの通知をご利用ください。")
+        )
     except Exception as e:
         print(f"[DEBUG] Error in handle_pharmacist_postback: {e}")
         logger.error(f"Error handling pharmacist postback: {e}")

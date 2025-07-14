@@ -347,7 +347,8 @@ def handle_postback(event):
     """ポストバックイベントの処理（ボタンクリックなど）"""
     user_id = event.source.user_id
     postback_data = event.postback.data
-    print(f"handle_postback: postback_data={postback_data!r}")
+    print(f"[DEBUG][統合Bot] handle_postback: postback_data={postback_data!r}, user_id={user_id}")
+    logger.info(f"[統合Bot] Received postback from {user_id}: {postback_data}")
     try:
         if postback_data in ["はい", "確認", "確定", "accept", "ok", "yes"] or postback_data.startswith("accept:"):
             print(f"[DEBUG] handle_postback: entering handle_confirmation_yes for user_id={user_id}, postback_data={postback_data}")
@@ -414,11 +415,13 @@ def handle_postback(event):
         elif postback_data.startswith("conditional:"):
             handle_conditional_response(event, postback_data)
         elif postback_data.startswith("pharmacist_apply:"):
-            print(f"[DEBUG] Calling handle_pharmacist_apply with data: {postback_data}")
+            print(f"[DEBUG][統合Bot] Calling handle_pharmacist_apply with data: {postback_data}")
             handle_pharmacist_apply(event, postback_data)
+            return
         elif postback_data.startswith("pharmacist_decline:"):
-            print(f"[DEBUG] Calling handle_pharmacist_decline with data: {postback_data}")
+            print(f"[DEBUG][統合Bot] Calling handle_pharmacist_decline with data: {postback_data}")
             handle_pharmacist_decline(event, postback_data)
+            return
         elif postback_data.startswith("pharmacist_details:"):
             print(f"[DEBUG] Calling handle_pharmacist_details with data: {postback_data}")
             handle_pharmacist_details(event, postback_data)
