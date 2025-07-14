@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pydantic_settings import BaseSettings
 import logging
+import os
 
 # 店舗Bot用のインポート
 from app.api.line_webhook import router as store_webhook_router
@@ -12,14 +13,14 @@ from integrated_pharmacist_webhook import router as pharmacist_webhook_router
 
 class IntegratedSettings(BaseSettings):
     # 店舗Bot用
-    line_channel_access_token: str
-    line_channel_secret: str
+    line_channel_access_token: str = ""
+    line_channel_secret: str = ""
     # 薬剤師Bot用
-    pharmacist_line_channel_access_token: str
-    pharmacist_line_channel_secret: str
+    pharmacist_line_channel_access_token: str = ""
+    pharmacist_line_channel_secret: str = ""
     # Google Sheets設定
     google_sheets_credentials_file: str = "credentials.json"
-    spreadsheet_id: str
+    spreadsheet_id: str = ""
     # Redis設定
     redis_url: str = "redis://localhost:6379"
     # データベース設定
@@ -89,9 +90,11 @@ async def health_check():
     return {"status": "healthy"}
 
 if __name__ == "__main__":
+    # Railwayの環境変数に対応
+    port = int(os.getenv("PORT", settings.port))
     uvicorn.run(
         "integrated_main:app",
         host=settings.host,
-        port=settings.port,
+        port=port,
         reload=settings.debug
     ) 

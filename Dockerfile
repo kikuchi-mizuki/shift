@@ -21,4 +21,4 @@ RUN mkdir -p data
 EXPOSE 8000
 
 # アプリケーションの起動
-CMD sh -c "uvicorn main_combined:app --host 0.0.0.0 --port $PORT" 
+CMD sh -c "uvicorn integrated_main:app --host 0.0.0.0 --port $PORT" 
