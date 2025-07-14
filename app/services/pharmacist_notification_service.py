@@ -14,8 +14,8 @@ class PharmacistNotificationService:
     """薬剤師への依頼通知サービス"""
     
     def __init__(self):
-        # 薬剤師Bot用のLINE設定を使用
-        self.line_bot_api = LineBotApi(settings.pharmacist_line_channel_access_token)
+        # 必ず統合Botのアクセストークンを使う
+        self.line_bot_api = LineBotApi(settings.line_channel_access_token)
         self.handler = WebhookHandler(settings.pharmacist_line_channel_secret)
         self.google_sheets_service = GoogleSheetsService()
     
