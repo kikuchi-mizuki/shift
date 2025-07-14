@@ -256,7 +256,7 @@ def handle_text_message(event):
                 success = google_sheets_service.register_pharmacist(pharmacist_data)
                 
                 if success:
-                    user_management_service.set_user_type(user_id, UserType.PHARMACIST)
+                    user_management_service.set_user_type(user_id, UserType.PHARMACIST, user_name=name)
                     confirmation_message = TextSendMessage(
                         text=f"✅ 薬剤師登録が完了しました！\n\n"
                              f"📋 登録情報：\n"
@@ -1563,7 +1563,7 @@ def handle_pharmacist_registration(event, message_text: str):
         success = google_sheets_service.register_pharmacist(pharmacist_data)
         
         if success:
-            user_management_service.set_user_type(user_id, UserType.PHARMACIST)
+            user_management_service.set_user_type(user_id, UserType.PHARMACIST, user_name=name)
             confirmation_message = TextSendMessage(
                 text=f"✅ 薬剤師登録が完了しました！\n\n"
                      f"📋 登録情報：\n"
@@ -1619,7 +1619,7 @@ def handle_store_registration(event):
     try:
         user_id = event.source.user_id
         # ユーザータイプを店舗に設定
-        user_management_service.set_user_type(user_id, UserType.STORE)
+        user_management_service.set_user_type(user_id, UserType.STORE, user_name="メイプル薬局")
         # 店舗情報を設定
         store_name = "メイプル薬局"
         store_number = "001"
@@ -1699,7 +1699,7 @@ def handle_store_registration_detailed(event, message_text: str):
             )
             if success:
                 # ユーザータイプを店舗に設定
-                user_management_service.set_user_type(user_id, UserType.STORE)
+                user_management_service.set_user_type(user_id, UserType.STORE, user_name=store_name)
                 # 店舗情報を設定
                 user_management_service.set_user_info(user_id, {
                     "store_name": store_name,

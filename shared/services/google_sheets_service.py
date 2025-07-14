@@ -86,8 +86,8 @@ class GoogleSheetsService:
     def _get_pharmacist_list(self, sheet_name: str) -> List[Dict[str, Any]]:
         """薬剤師リストを取得"""
         try:
-            # 薬剤師情報の範囲を取得（A列: 名前, B列: LINE ID, C列: 電話番号）
-            range_name = f"{sheet_name}!A2:C100"  # 最大100名まで
+            # 薬剤師情報の範囲を取得（A列: 名前, B列: LINE ID, C列: 電話番号, D列: user_type）
+            range_name = f"{sheet_name}!A2:D100"  # 最大100名まで
             result = self.service.spreadsheets().values().get(
                 spreadsheetId=self.spreadsheet_id,
                 range=range_name
@@ -103,6 +103,7 @@ class GoogleSheetsService:
                         "name": row[0].strip(),
                         "user_id": row[1].strip() if len(row) > 1 else "",
                         "phone": row[2].strip() if len(row) > 2 else "",
+                        "user_type": row[3].strip() if len(row) > 3 else "pharmacist",  # デフォルトはpharmacist
                         "row_number": i + 2  # 実際の行番号（ヘッダー行を考慮）
                     }
                     pharmacists.append(pharmacist)
@@ -113,6 +114,86 @@ class GoogleSheetsService:
         except Exception as e:
             logger.error(f"Error getting pharmacist list: {e}")
             return []
+
+    def get_user_type_from_sheets(self, user_id: str) -> Optional[str]:
+        """Google Sheetsからuser_typeを取得"""
+        try:
+            if not self.service:
+                logger.warning("Google Sheets service not available")
+                return None
+            
+            # 薬剤師リストから検索
+            today = datetime.now().date()
+            sheet_name = self.get_sheet_name(today)
+            pharmacists = self._get_pharmacist_list(sheet_name)
+            
+            for pharmacist in pharmacists:
+                if pharmacist["user_id"] == user_id:
+                    logger.info(f"Found user_type in pharmacist list: {pharmacist['user_type']}")
+                    return pharmacist["user_type"]
+            
+            # 店舗リストから検索
+            stores = self.get_store_list("店舗登録")
+            for store in stores:
+                if store["user_id"] == user_id:
+                    logger.info(f"Found user_type in store list: store")
+                    return "store"
+            
+            logger.info(f"User type not found for user_id: {user_id}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting user type from sheets: {e}")
+            return None
+
+    def set_user_type_in_sheets(self, user_id: str, user_type: str) -> bool:
+        """Google Sheetsにuser_typeを設定"""
+        try:
+            if not self.service:
+                logger.warning("Google Sheets service not available")
+                return False
+            
+            # 薬剤師リストから検索して更新
+            today = datetime.now().date()
+            sheet_name = self.get_sheet_name(today)
+            pharmacists = self._get_pharmacist_list(sheet_name)
+            
+            for pharmacist in pharmacists:
+                if pharmacist["user_id"] == user_id:
+                    # user_type列（D列）を更新
+                    range_name = f"{sheet_name}!D{pharmacist['row_number']}"
+                    body = {'values': [[user_type]]}
+                    self.service.spreadsheets().values().update(
+                        spreadsheetId=self.spreadsheet_id,
+                        range=range_name,
+                        valueInputOption='RAW',
+                        body=body
+                    ).execute()
+                    logger.info(f"Updated user_type for pharmacist {pharmacist['name']}: {user_type}")
+                    return True
+            
+            # 店舗リストから検索して更新
+            stores = self.get_store_list("店舗登録")
+            for store in stores:
+                if store["user_id"] == user_id:
+                    # user_type列（E列）を更新
+                    range_name = f"店舗登録!E{store['row_number']}"
+                    body = {'values': [[user_type]]}
+                    self.service.spreadsheets().values().update(
+                        spreadsheetId=self.spreadsheet_id,
+                        range=range_name,
+                        valueInputOption='RAW',
+                        body=body
+                    ).execute()
+                    logger.info(f"Updated user_type for store {store['name']}: {user_type}")
+                    return True
+            
+            logger.warning(f"User not found for user_id: {user_id}")
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error setting user type in sheets: {e}")
+            return False
     
     def _is_available_for_schedule(self, schedule: str, time_slot: str) -> bool:
         """スケジュールが指定時間帯で利用可能かチェック"""
@@ -462,7 +543,8 @@ class GoogleSheetsService:
     def get_store_list(self, sheet_name: str = "店舗登録") -> List[Dict[str, Any]]:
         """店舗リストを取得"""
         try:
-            range_name = f"{sheet_name}!A2:D100"
+            # 店舗情報の範囲を取得（A列: 番号, B列: 店舗名, C列: LINE ID, D列: 電話番号, E列: user_type）
+            range_name = f"{sheet_name}!A2:E100"  # 最大100店舗まで
             result = self.service.spreadsheets().values().get(
                 spreadsheetId=self.spreadsheet_id,
                 range=range_name
@@ -477,6 +559,7 @@ class GoogleSheetsService:
                         "name": row[1].strip(),
                         "user_id": row[2].strip() if len(row) > 2 else "",
                         "phone": row[3].strip() if len(row) > 3 else "",
+                        "user_type": row[4].strip() if len(row) > 4 else "store",  # デフォルトはstore
                         "row_number": i + 2
                     }
                     stores.append(store)
