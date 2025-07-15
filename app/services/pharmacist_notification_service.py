@@ -2,6 +2,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import LineBotApiError
 from linebot.models import TextSendMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction
 
 from app.services.google_sheets_service import GoogleSheetsService
@@ -14,9 +15,23 @@ class PharmacistNotificationService:
     """薬剤師への依頼通知サービス"""
     
     def __init__(self):
-        # 必ず統合Botのアクセストークンを使う
-        self.line_bot_api = LineBotApi(settings.line_channel_access_token)
-        self.handler = WebhookHandler(settings.pharmacist_line_channel_secret)
+        # 薬剤師Bot専用のアクセストークンを使う
+        pharmacist_token = settings.pharmacist_line_channel_access_token
+        pharmacist_secret = settings.pharmacist_line_channel_secret
+        
+        # デバッグ: アクセストークンの設定状況をログ出力
+        if pharmacist_token:
+            logger.info(f"Pharmacist notification service initialized with token: {pharmacist_token[:10]}...")
+        else:
+            logger.warning("Pharmacist LINE channel access token is not set!")
+            
+        if pharmacist_secret:
+            logger.info(f"Pharmacist notification service initialized with secret: {pharmacist_secret[:10]}...")
+        else:
+            logger.warning("Pharmacist LINE channel secret is not set!")
+        
+        self.line_bot_api = LineBotApi(pharmacist_token)
+        self.handler = WebhookHandler(pharmacist_secret)
         self.google_sheets_service = GoogleSheetsService()
     
     def notify_pharmacists_of_request(
@@ -201,19 +216,39 @@ class PharmacistNotificationService:
                 print(f"[DEBUG] 通知送信先 pharmacist_user_id: '{pharmacist_user_id}', name: '{pharmacist_name or ''}'")
                 
                 # メッセージを送信（push_messageを使用）
-                self.line_bot_api.push_message(
-                    pharmacist_user_id, 
-                    [text_message, template_message]
-                )
-                
-                logger.info(f"Sent notification to pharmacist {pharmacist_name or ''}")
-                return True
+                try:
+                    self.line_bot_api.push_message(
+                        pharmacist_user_id, 
+                        [text_message, template_message]
+                    )
+                    logger.info(f"Sent notification to pharmacist {pharmacist_name or ''}")
+                    return True
+                except LineBotApiError as push_error:
+                    logger.error(f"Push message error for pharmacist {pharmacist_name or ''}: {push_error}")
+                    # より詳細なエラー情報をログ出力
+                    if hasattr(push_error, 'status_code'):
+                        logger.error(f"Error status code: {push_error.status_code}")
+                    if hasattr(push_error, 'error_response'):
+                        logger.error(f"Error response: {push_error.error_response}")
+                    if hasattr(push_error, 'request_id'):
+                        logger.error(f"Request ID: {push_error.request_id}")
+                    return False
             else:
                 logger.info(f"Skipping notification for pharmacist {pharmacist_name or ''} (invalid user ID for production)")
                 return True  # 開発用に成功として扱う
                 
-        except Exception as e:
+        except LineBotApiError as e:
             logger.error(f"Error sending notification to pharmacist {pharmacist_name or ''}: {e}")
+            # より詳細なエラー情報をログ出力
+            if hasattr(e, 'status_code'):
+                logger.error(f"Error status code: {e.status_code}")
+            if hasattr(e, 'error_response'):
+                logger.error(f"Error response: {e.error_response}")
+            if hasattr(e, 'request_id'):
+                logger.error(f"Request ID: {e.request_id}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error sending notification to pharmacist {pharmacist_name or ''}: {e}")
             return False
     
     def handle_pharmacist_response(

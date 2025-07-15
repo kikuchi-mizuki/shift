@@ -5,8 +5,18 @@ from pydantic_settings import BaseSettings
 
 class StoreBotSettings(BaseSettings):
     # LINE Bot設定（店舗専用）
-    store_line_channel_access_token: str
-    store_line_channel_secret: str
+    store_line_channel_access_token: str = ""
+    store_line_channel_secret: str = ""
+    
+    # Google Sheets設定
+    google_sheets_credentials_file: str = "credentials.json"
+    spreadsheet_id: str = ""
+    
+    # Redis設定
+    redis_url: str = "redis://localhost:6379"
+    
+    # データベース設定
+    database_url: str = "sqlite:///./pharmacy_schedule.db"
     
     # アプリケーション設定
     debug: bool = True

@@ -4,15 +4,12 @@ from pydantic_settings import BaseSettings
 
 
 class PharmacistBotSettings(BaseSettings):
-    # 店舗Bot用（未使用だが.envに存在するため定義）
-    line_channel_access_token: str
-    line_channel_secret: str
-    # 薬剤師Bot用
-    pharmacist_line_channel_access_token: str
-    pharmacist_line_channel_secret: str
+    # 薬剤師Bot用LINE設定
+    pharmacist_line_channel_access_token: str = ""
+    pharmacist_line_channel_secret: str = ""
     # Google Sheets設定
     google_sheets_credentials_file: str = "credentials.json"
-    spreadsheet_id: str
+    spreadsheet_id: str = ""
     # Redis設定
     redis_url: str = "redis://localhost:6379"
     # データベース設定
