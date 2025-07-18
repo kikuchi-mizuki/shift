@@ -369,14 +369,28 @@ class GoogleSheetsService:
                 'values': [record_data]
             }
             
-            # 応募記録シートに追加
-            self.service.spreadsheets().values().append(
-                spreadsheetId=self.spreadsheet_id,
-                range="ApplicationRecords!A:G",  # 英語のシート名を使用
-                valueInputOption='RAW',
-                insertDataOption='INSERT_ROWS',
-                body=body
-            ).execute()
+            # 応募記録シートに追加（シートが存在しない場合は作成を試行）
+            try:
+                self.service.spreadsheets().values().append(
+                    spreadsheetId=self.spreadsheet_id,
+                    range="ApplicationRecords!A:G",  # 英語のシート名を使用
+                    valueInputOption='RAW',
+                    insertDataOption='INSERT_ROWS',
+                    body=body
+                ).execute()
+            except Exception as e:
+                if "Unable to parse range" in str(e):
+                    # シートが存在しない場合、デフォルトシートに記録
+                    logger.warning(f"ApplicationRecords sheet not found, using default sheet: {e}")
+                    self.service.spreadsheets().values().append(
+                        spreadsheetId=self.spreadsheet_id,
+                        range="Sheet1!A:G",  # デフォルトシート名
+                        valueInputOption='RAW',
+                        insertDataOption='INSERT_ROWS',
+                        body=body
+                    ).execute()
+                else:
+                    raise e
             
             logger.info(f"Recorded application for {pharmacist_name} (request: {request_id})")
             return True
