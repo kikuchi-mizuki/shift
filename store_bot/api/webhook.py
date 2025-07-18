@@ -215,8 +215,9 @@ def handle_store_parsed_shift_request(event, parsed_data):
         store_temp_data[user_id]["time_slot"] = parsed_data["time_slot"]
         store_temp_data[user_id]["required_count"] = parsed_data["required_count"]
         store_temp_data[user_id]["notes"] = parsed_data.get("notes", "")
+        
         # 依頼内容確認メッセージを見やすく整形
-            response = TextSendMessage(
+        response = TextSendMessage(
             text=(
                 "【依頼内容の確認】\n\n"
                 f"📅 日付: {parsed_data['date'].strftime('%Y/%m/%d')}\n"
