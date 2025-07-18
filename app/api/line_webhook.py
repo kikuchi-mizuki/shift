@@ -1435,7 +1435,7 @@ def handle_test_commands(event, message_text: str):
         print(f"[DEBUG] handle_test_commands: user_id={user_id}, message_text='{message_text}'")
         
         if message_text == "テスト":
-                response = TextSendMessage(
+            response = TextSendMessage(
                 text="✅ テストメッセージです！\n\n"
                      "Botが正常に動作しています。\n"
                      "店舗登録や薬剤師登録をお試しください。"
@@ -1443,7 +1443,7 @@ def handle_test_commands(event, message_text: str):
             print(f"[DEBUG] Sending test response to user_id={user_id}")
             line_bot_service.line_bot_api.reply_message(event.reply_token, response)
             print(f"[DEBUG] Test response sent successfully to user_id={user_id}")
-            else:
+        else:
             response = TextSendMessage(text="テストコマンドが認識されませんでした。")
             print(f"[DEBUG] Sending unknown test command response to user_id={user_id}")
             line_bot_service.line_bot_api.reply_message(event.reply_token, response)
@@ -1633,29 +1633,30 @@ def handle_store_registration_detailed(event, message_text: str):
         # 柔軟な区切り文字対応
         text = message_text.replace("店舗登録", "").strip()
         parts = list(filter(None, re.split(r'[ ,、\u3000]+', text)))
-                if len(parts) >= 2:
-                    store_number = parts[0]
-                    store_name = parts[1]
-                    logger.info(f"Attempting to register store: number={store_number}, name={store_name}, user_id={user_id}")
-                    # Google Sheetsに店舗userIdを登録（必ず「店舗登録」シートを参照）
-                    success = google_sheets_service.register_store_user_id(
-                        number=store_number,
-                        name=store_name,
-                        user_id=user_id,
-                        sheet_name="店舗登録"
-                    )
-                    if success:
-                        # ユーザータイプを店舗に設定
+        
+        if len(parts) >= 2:
+            store_number = parts[0]
+            store_name = parts[1]
+            logger.info(f"Attempting to register store: number={store_number}, name={store_name}, user_id={user_id}")
+            # Google Sheetsに店舗userIdを登録（必ず「店舗登録」シートを参照）
+            success = google_sheets_service.register_store_user_id(
+                number=store_number,
+                name=store_name,
+                user_id=user_id,
+                sheet_name="店舗登録"
+            )
+            if success:
+                # ユーザータイプを店舗に設定
                 user_management_service.set_user_type(user_id, UserType.STORE, user_name=store_name)
-                        # 店舗情報を設定
-                        user_management_service.set_user_info(user_id, {
-                            "store_name": store_name,
+                # 店舗情報を設定
+                user_management_service.set_user_info(user_id, {
+                    "store_name": store_name,
                     "store_number": store_number,
-                            "registered_at": datetime.now().isoformat()
-                        })
+                    "registered_at": datetime.now().isoformat()
+                })
                 # 登録完了メッセージ（push_messageでエラー回避）
-                        response = TextSendMessage(
-                            text=f"✅ 店舗登録が完了しました！\n\n"
+                response = TextSendMessage(
+                    text=f"✅ 店舗登録が完了しました！\n\n"
                          f"🏪 店舗名: {store_name}\n"
                          f"📋 店舗番号: {store_number}"
                 )
@@ -1664,14 +1665,14 @@ def handle_store_registration_detailed(event, message_text: str):
                 # 自動でシフト依頼フロー開始
                 handle_shift_request(event, "", use_push=True)
                 logger.info(f"Store registration completed for {store_name} ({user_id})")
-                    else:
+            else:
                 error_message = TextSendMessage(
                     text=f"❌ 店舗登録に失敗しました。\n\n"
                          f"店舗番号「{store_number}」と店舗名「{store_name}」の組み合わせが\n"
                          f"正しいかご確認ください。"
                         )
                 line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
-                else:
+        else:
             error_message = TextSendMessage(
                 text="❌ 店舗登録フォーマットが正しくありません。\n\n"
                  "正しいフォーマット：\n"
