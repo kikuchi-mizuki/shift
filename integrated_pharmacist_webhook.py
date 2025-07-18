@@ -100,25 +100,25 @@ def handle_pharmacist_message(event):
             logger.info(f"Attempting to register pharmacist: name={name}, phone={phone}, user_id={user_id}")
             
             try:
-                sheets_service = GoogleSheetsService()
+            sheets_service = GoogleSheetsService()
                 log_debug(f"GoogleSheetsService initialized successfully")
                 
-                success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
+            success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
                 log_debug(f"Registration result: success={success}")
-                
-                if success:
+            
+            if success:
                     response = TextSendMessage(text=f"{name}さんのLINE IDを自動登録しました。今後はBotから通知が届きます。")
                     log_debug(f"Sending registration success message to user_id={user_id}")
                     pharmacist_line_bot_api.reply_message(event.reply_token, response)
                     log_debug(f"Registration success response sent successfully to user_id={user_id}")
-                    logger.info(f"Successfully registered pharmacist user_id for {name}")
-                else:
+                logger.info(f"Successfully registered pharmacist user_id for {name}")
+            else:
                     response = TextSendMessage(text=f"{name}さんの登録に失敗しました。名前・電話番号が正しいかご確認ください。")
                     log_debug(f"Sending registration failure message to user_id={user_id}")
                     pharmacist_line_bot_api.reply_message(event.reply_token, response)
                     log_debug(f"Registration failure response sent successfully to user_id={user_id}")
-                    logger.warning(f"Failed to register pharmacist user_id for {name}")
-            except Exception as e:
+                logger.warning(f"Failed to register pharmacist user_id for {name}")
+        except Exception as e:
                 error_msg = f"Exception during registration: {str(e)}"
                 log_debug(error_msg)
                 logger.error(error_msg)
@@ -153,23 +153,23 @@ def handle_pharmacist_message(event):
 @router.post("/webhook")
 async def pharmacist_line_webhook(request: Request):
     try:
-        body = await request.body()
-        signature = request.headers.get('X-Line-Signature', '')
+    body = await request.body()
+    signature = request.headers.get('X-Line-Signature', '')
         
         log_debug(f"Pharmacist webhook received: body_length={len(body)}, signature={signature[:20] if signature else 'None'}...")
         logger.info(f"Pharmacist webhook received: body_length={len(body)}")
         
-        try:
-            pharmacist_handler.handle(body.decode('utf-8'), signature)
+    try:
+        pharmacist_handler.handle(body.decode('utf-8'), signature)
             log_debug(f"Pharmacist webhook processed successfully")
             logger.info("Pharmacist webhook processed successfully")
-        except InvalidSignatureError:
+    except InvalidSignatureError:
             error_msg = "Invalid signature for pharmacist webhook"
             log_debug(error_msg)
             logger.error(error_msg)
-            raise HTTPException(status_code=400, detail="Invalid signature")
+        raise HTTPException(status_code=400, detail="Invalid signature")
         
-        return {"status": "ok"}
+    return {"status": "ok"} 
         
     except Exception as e:
         error_msg = f"Pharmacist webhook error: {e}"

@@ -254,7 +254,7 @@ def handle_text_message(event):
                     )
                     print(f"[DEBUG] Sending registration help to user_id={user_id}")
                     line_bot_service.line_bot_api.reply_message(event.reply_token, help_message)
-                    return
+            return
                 name = parts[1]
                 phone = parts[2]
                 availability = parts[3:]
@@ -293,7 +293,7 @@ def handle_text_message(event):
                     line_bot_service.line_bot_api.push_message(user_id, confirmation_message)
                     # 追加: 登録済みユーザー案内をpush_messageで送信
                     line_bot_service.line_bot_api.push_message(user_id, TextSendMessage(text="シフト依頼があったら、今後はBotから通知が届きます！"))
-                else:
+            else:
                     confirmation_message = TextSendMessage(
                         text="❌ 登録処理中にエラーが発生しました。\n"
                              "しばらく時間をおいて再度お試しください。"
@@ -311,19 +311,19 @@ def handle_text_message(event):
                 print(f"[DEBUG] Sending store user error to user_id={user_id}")
                 line_bot_service.line_bot_api.reply_message(event.reply_token, response)
             return
-
+        
         # 確認応答の処理（最優先）
         if message_text in ["はい", "確認", "確定"]:
             print(f"[DEBUG] handle_text_message: entering handle_confirmation_yes for user_id={user_id}, message_text={message_text}")
             handle_confirmation_yes(event)
             return
-
+        
         # 登録済み店舗ユーザーは何か送ったら即シフト依頼
         if user_type == UserType.STORE:
             print(f"[DEBUG] Processing shift request for store user_id={user_id}")
             handle_shift_request(event, message_text)
             return
-
+        
         # 従来の勤務依頼ワード判定・薬剤師ユーザー向け分岐は不要になる
         # その他のメッセージ
         print(f"[DEBUG] Processing other messages for user_id={user_id}")
@@ -414,17 +414,10 @@ def handle_postback(event):
             handle_decline_response(event, postback_data)
         elif postback_data.startswith("conditional:"):
             handle_conditional_response(event, postback_data)
-        elif postback_data.startswith("pharmacist_apply:"):
-            print(f"[DEBUG][統合Bot] Calling handle_pharmacist_apply with data: {postback_data}")
-            handle_pharmacist_apply(event, postback_data)
+        # 薬剤師Bot専用のPostbackEventは薬剤師Botで処理するため、統合Botではスキップ
+        elif postback_data.startswith("pharmacist_apply:") or postback_data.startswith("pharmacist_decline:") or postback_data.startswith("pharmacist_details:"):
+            logger.info(f"[統合Bot] Skipping pharmacist postback event: {postback_data} (handled by pharmacist bot)")
             return
-        elif postback_data.startswith("pharmacist_decline:"):
-            print(f"[DEBUG][統合Bot] Calling handle_pharmacist_decline with data: {postback_data}")
-            handle_pharmacist_decline(event, postback_data)
-            return
-        elif postback_data.startswith("pharmacist_details:"):
-            print(f"[DEBUG] Calling handle_pharmacist_details with data: {postback_data}")
-            handle_pharmacist_details(event, postback_data)
         elif postback_data == "select_time":
             handle_time_selection(event)
         elif postback_data == "select_count":
@@ -1440,7 +1433,7 @@ def handle_test_commands(event, message_text: str):
         print(f"[DEBUG] handle_test_commands: user_id={user_id}, message_text='{message_text}'")
         
         if message_text == "テスト":
-            response = TextSendMessage(
+                response = TextSendMessage(
                 text="✅ テストメッセージです！\n\n"
                      "Botが正常に動作しています。\n"
                      "店舗登録や薬剤師登録をお試しください。"
@@ -1448,7 +1441,7 @@ def handle_test_commands(event, message_text: str):
             print(f"[DEBUG] Sending test response to user_id={user_id}")
             line_bot_service.line_bot_api.reply_message(event.reply_token, response)
             print(f"[DEBUG] Test response sent successfully to user_id={user_id}")
-        else:
+            else:
             response = TextSendMessage(text="テストコマンドが認識されませんでした。")
             print(f"[DEBUG] Sending unknown test command response to user_id={user_id}")
             line_bot_service.line_bot_api.reply_message(event.reply_token, response)
@@ -1638,29 +1631,29 @@ def handle_store_registration_detailed(event, message_text: str):
         # 柔軟な区切り文字対応
         text = message_text.replace("店舗登録", "").strip()
         parts = list(filter(None, re.split(r'[ ,、\u3000]+', text)))
-        if len(parts) >= 2:
-            store_number = parts[0]
-            store_name = parts[1]
-            logger.info(f"Attempting to register store: number={store_number}, name={store_name}, user_id={user_id}")
-            # Google Sheetsに店舗userIdを登録（必ず「店舗登録」シートを参照）
-            success = google_sheets_service.register_store_user_id(
-                number=store_number,
-                name=store_name,
-                user_id=user_id,
-                sheet_name="店舗登録"
-            )
-            if success:
-                # ユーザータイプを店舗に設定
+                if len(parts) >= 2:
+                    store_number = parts[0]
+                    store_name = parts[1]
+                    logger.info(f"Attempting to register store: number={store_number}, name={store_name}, user_id={user_id}")
+                    # Google Sheetsに店舗userIdを登録（必ず「店舗登録」シートを参照）
+                    success = google_sheets_service.register_store_user_id(
+                        number=store_number,
+                        name=store_name,
+                        user_id=user_id,
+                        sheet_name="店舗登録"
+                    )
+                    if success:
+                        # ユーザータイプを店舗に設定
                 user_management_service.set_user_type(user_id, UserType.STORE, user_name=store_name)
-                # 店舗情報を設定
-                user_management_service.set_user_info(user_id, {
-                    "store_name": store_name,
+                        # 店舗情報を設定
+                        user_management_service.set_user_info(user_id, {
+                            "store_name": store_name,
                     "store_number": store_number,
-                    "registered_at": datetime.now().isoformat()
-                })
+                            "registered_at": datetime.now().isoformat()
+                        })
                 # 登録完了メッセージ（push_messageでエラー回避）
-                response = TextSendMessage(
-                    text=f"✅ 店舗登録が完了しました！\n\n"
+                        response = TextSendMessage(
+                            text=f"✅ 店舗登録が完了しました！\n\n"
                          f"🏪 店舗名: {store_name}\n"
                          f"📋 店舗番号: {store_number}"
                 )
@@ -1669,20 +1662,20 @@ def handle_store_registration_detailed(event, message_text: str):
                 # 自動でシフト依頼フロー開始
                 handle_shift_request(event, "", use_push=True)
                 logger.info(f"Store registration completed for {store_name} ({user_id})")
-            else:
+                    else:
                 error_message = TextSendMessage(
                     text=f"❌ 店舗登録に失敗しました。\n\n"
                          f"店舗番号「{store_number}」と店舗名「{store_name}」の組み合わせが\n"
                          f"正しいかご確認ください。"
-                )
+                        )
                 line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
-        else:
+                else:
             error_message = TextSendMessage(
                 text="❌ 店舗登録フォーマットが正しくありません。\n\n"
-                     "正しいフォーマット：\n"
+                 "正しいフォーマット：\n"
                      "店舗登録 [店舗番号] [店舗名]\n\n"
                      "例：店舗登録 002 サンライズ薬局"
-            )
+        )
             line_bot_service.line_bot_api.reply_message(event.reply_token, error_message)
     except Exception as e:
         logger.error(f"Error in store registration detailed: {e}")

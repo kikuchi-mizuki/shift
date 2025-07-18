@@ -62,25 +62,25 @@ pharmacist_line_bot_service = PharmacistLineBotService()
 @pharmacist_line_bot_service.handler.add(MessageEvent, message=TextMessage)
 def handle_pharmacist_message(event):
     text = event.message.text.strip()
-    user_id = event.source.user_id
+        user_id = event.source.user_id
     # 柔軟な区切り文字対応
     if re.search(r'[ ,、\u3000]', text):
         parts = re.split(r'[ ,、\u3000]+', text)
         if len(parts) >= 2:
             name = parts[0]
             phone = parts[1]
-            sheets_service = GoogleSheetsService()
-            success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
-            if success:
+        sheets_service = GoogleSheetsService()
+        success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
+        if success:
                 # TextSendMessage(text=f"{name}さんのLINE IDを自動登録しました。今後はBotから通知が届きます。")
                 # ↑このメッセージ送信を削除
-                return
-            else:
-                pharmacist_line_bot_service.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=f"{name}さんの登録に失敗しました。名前・電話番号が正しいかご確認ください。")
-                )
-                return
+            return
+        else:
+            pharmacist_line_bot_service.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"{name}さんの登録に失敗しました。名前・電話番号が正しいかご確認ください。")
+            )
+            return
     # コマンド以外は案内メッセージを自動返信（未登録ユーザーのみ）
     # ここでユーザー登録判定が必要なら追加
     guide_text = (
@@ -107,10 +107,10 @@ def handle_pharmacist_postback(event):
     """薬剤師Botのポストバックイベント処理（無効化バージョン）"""
     print(f"[DEBUG] handle_pharmacist_postback called with data: {event.postback.data}")
     try:
-        pharmacist_line_bot_service.reply_message(
-            event.reply_token,
+            pharmacist_line_bot_service.reply_message(
+                event.reply_token,
             TextSendMessage(text="このボタンは現在ご利用いただけません。最新のBotからの通知をご利用ください。")
-        )
+            )
     except Exception as e:
         print(f"[DEBUG] Error in handle_pharmacist_postback: {e}")
         logger.error(f"Error handling pharmacist postback: {e}")

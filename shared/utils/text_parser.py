@@ -73,7 +73,7 @@ def parse_shift_request(text: str) -> Optional[Dict[str, Any]]:
         notes = ""
         if "備考" in text or "メモ" in text:
             notes_match = re.search(r'(備考|メモ)[:：]\s*(.+)', text)
-            if notes_match:
+        if notes_match:
                 notes = notes_match.group(2).strip()
         
         return {

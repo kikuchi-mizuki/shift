@@ -174,8 +174,8 @@ class ScheduleService:
                 except Exception as e:
                     logger.error(f"Failed to record application in Google Sheets: {e}")
                 # 3. 店舗に確定通知
-                confirmed_pharmacists = [pharmacist]
-                self.line_bot_service.send_confirmation_to_store(store, shift_request, confirmed_pharmacists)
+            confirmed_pharmacists = [pharmacist]
+            self.line_bot_service.send_confirmation_to_store(store, shift_request, confirmed_pharmacists)
             # 4. 他の応募者に辞退通知
             self._notify_other_applicants(shift_request, pharmacist)
             # 5. リクエストステータスを完了に更新

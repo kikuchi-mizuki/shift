@@ -217,12 +217,12 @@ class PharmacistNotificationService:
                 
                 # メッセージを送信（push_messageを使用）
                 try:
-                    self.line_bot_api.push_message(
-                        pharmacist_user_id, 
-                        [text_message, template_message]
-                    )
-                    logger.info(f"Sent notification to pharmacist {pharmacist_name or ''}")
-                    return True
+                self.line_bot_api.push_message(
+                    pharmacist_user_id, 
+                    [text_message, template_message]
+                )
+                logger.info(f"Sent notification to pharmacist {pharmacist_name or ''}")
+                return True
                 except LineBotApiError as push_error:
                     logger.error(f"Push message error for pharmacist {pharmacist_name or ''}: {push_error}")
                     # より詳細なエラー情報をログ出力
