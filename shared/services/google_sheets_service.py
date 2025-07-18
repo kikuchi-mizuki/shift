@@ -372,7 +372,7 @@ class GoogleSheetsService:
             # 応募記録シートに追加
             self.service.spreadsheets().values().append(
                 spreadsheetId=self.spreadsheet_id,
-                range="応募記録!A:G",
+                range="ApplicationRecords!A:G",  # 英語のシート名を使用
                 valueInputOption='RAW',
                 insertDataOption='INSERT_ROWS',
                 body=body
