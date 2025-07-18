@@ -6,7 +6,7 @@ from linebot.models import (
     TextSendMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction
 )
 import logging
-from ..config import settings
+from ..config import pharmacist_settings as settings
 from ..services.line_bot_service import pharmacist_line_bot_service
 from ..services.notification_service import PharmacistNotificationService
 from shared.services.request_manager import RequestManager
