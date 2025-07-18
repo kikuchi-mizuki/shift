@@ -280,8 +280,21 @@ def handle_pharmacist_apply(event, postback_data: str):
             else:
                 store_line_bot_api = LineBotApi(store_channel_access_token)
                 
-                # 店舗のuser_id（実際はDBから取得）
-                store_user_id = "U37da00c3f064eb4acc037aa8ec6ea79e"  # サンライズ薬局のuser_id
+                # 店舗のuser_idを動的に取得
+                store_user_id = None
+                if request_data and 'store_user_id' in request_data:
+                    store_user_id = request_data['store_user_id']
+                else:
+                    # リクエストIDから店舗のuser_idを抽出
+                    # リクエストID形式: req_U37da00c3f064eb4acc037aa8ec6ea79e_20250718_225100
+                    if request_id.startswith('req_'):
+                        parts = request_id.split('_')
+                        if len(parts) >= 2:
+                            store_user_id = parts[1]
+                
+                if not store_user_id:
+                    logger.warning(f"[薬剤師Bot] Could not determine store user_id for request: {request_id}")
+                    return
                 
                 # 薬剤師名を取得（実際はDBから取得）
                 pharmacist_name = "田中薬剤師"  # 仮の名前
