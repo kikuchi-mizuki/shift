@@ -274,9 +274,9 @@ def handle_pharmacist_apply(event, postback_data: str):
             from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction
             
             # 店舗Bot用のLINE API（環境変数から取得）
-            store_channel_access_token = os.getenv('STORE_LINE_CHANNEL_ACCESS_TOKEN')
+            store_channel_access_token = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
             if not store_channel_access_token:
-                logger.warning("[薬剤師Bot] STORE_LINE_CHANNEL_ACCESS_TOKEN not set, skipping store notification")
+                logger.warning("[薬剤師Bot] LINE_CHANNEL_ACCESS_TOKEN not set, skipping store notification")
             else:
                 store_line_bot_api = LineBotApi(store_channel_access_token)
                 
