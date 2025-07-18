@@ -1,86 +1,69 @@
+import os
 import logging
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import (
-    TextSendMessage,
-    TemplateSendMessage,
-    ButtonsTemplate,
-    PostbackAction,
-    MessageEvent,
-    TextMessage,
-    PostbackEvent
-)
-
-from pharmacist_bot.config import pharmacist_settings
-from shared.services.google_sheets_service import GoogleSheetsService
-from shared.services.request_manager import request_manager
 import re
+from datetime import datetime
+from linebot import LineBotApi, WebhookHandler
+from linebot.models import TextSendMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, MessageEvent, TextMessage, PostbackEvent
+from linebot.exceptions import LineBotApiError
+from shared.services.google_sheets_service import GoogleSheetsService
+from shared.services.request_manager import RequestManager
 
 logger = logging.getLogger(__name__)
 
-
 class PharmacistLineBotService:
     def __init__(self):
-        self.line_bot_api = LineBotApi(pharmacist_settings.pharmacist_line_channel_access_token)
-        self.handler = WebhookHandler(pharmacist_settings.pharmacist_line_channel_secret)
-        logger.info("Pharmacist Line Bot service initialized")
+        self.channel_access_token = os.getenv('PHARMACIST_LINE_CHANNEL_ACCESS_TOKEN')
+        self.channel_secret = os.getenv('PHARMACIST_LINE_CHANNEL_SECRET')
+        self.line_bot_api = LineBotApi(self.channel_access_token)
+        self.handler = WebhookHandler(self.channel_secret)
 
     def send_message(self, user_id: str, message: TextSendMessage):
-        """メッセージを送信"""
         try:
             self.line_bot_api.push_message(user_id, message)
-            logger.info(f"Message sent to pharmacist user: {user_id}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send message to pharmacist user {user_id}: {e}")
-            return False
+            logger.info(f"Message sent to pharmacist: {user_id}")
+        except LineBotApiError as e:
+            logger.error(f"Failed to send message to pharmacist {user_id}: {e}")
 
     def send_template_message(self, user_id: str, template: TemplateSendMessage):
-        """テンプレートメッセージを送信"""
         try:
             self.line_bot_api.push_message(user_id, template)
-            logger.info(f"Template message sent to pharmacist user: {user_id}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send template message to pharmacist user {user_id}: {e}")
-            return False
+            logger.info(f"Template message sent to pharmacist: {user_id}")
+        except LineBotApiError as e:
+            logger.error(f"Failed to send template message to pharmacist {user_id}: {e}")
 
     def reply_message(self, reply_token: str, message):
-        """リプライメッセージを送信"""
         try:
             self.line_bot_api.reply_message(reply_token, message)
-            logger.info(f"Reply message sent to pharmacist user")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send reply message: {e}")
-            return False
-
+            logger.info(f"Reply message sent to pharmacist")
+        except LineBotApiError as e:
+            logger.error(f"Failed to send reply message to pharmacist: {e}")
 
 # グローバルインスタンス
-pharmacist_line_bot_service = PharmacistLineBotService() 
+pharmacist_line_bot_service = PharmacistLineBotService()
+request_manager = RequestManager()
 
 @pharmacist_line_bot_service.handler.add(MessageEvent, message=TextMessage)
 def handle_pharmacist_message(event):
     text = event.message.text.strip()
-        user_id = event.source.user_id
+    user_id = event.source.user_id
     # 柔軟な区切り文字対応
     if re.search(r'[ ,、\u3000]', text):
         parts = re.split(r'[ ,、\u3000]+', text)
         if len(parts) >= 2:
             name = parts[0]
             phone = parts[1]
-        sheets_service = GoogleSheetsService()
-        success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
-        if success:
+            sheets_service = GoogleSheetsService()
+            success = sheets_service.register_pharmacist_user_id(name, phone, user_id)
+            if success:
                 # TextSendMessage(text=f"{name}さんのLINE IDを自動登録しました。今後はBotから通知が届きます。")
                 # ↑このメッセージ送信を削除
-            return
-        else:
-            pharmacist_line_bot_service.reply_message(
-                event.reply_token,
-                TextSendMessage(text=f"{name}さんの登録に失敗しました。名前・電話番号が正しいかご確認ください。")
-            )
-            return
+                return
+            else:
+                pharmacist_line_bot_service.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=f"{name}さんの登録に失敗しました。名前・電話番号が正しいかご確認ください。")
+                )
+                return
     # コマンド以外は案内メッセージを自動返信（未登録ユーザーのみ）
     # ここでユーザー登録判定が必要なら追加
     guide_text = (
@@ -104,12 +87,22 @@ def handle_pharmacist_message(event):
 
 @pharmacist_line_bot_service.handler.add(PostbackEvent)
 def handle_pharmacist_postback(event):
-    """薬剤師Botのポストバックイベント処理（無効化バージョン）"""
+    """薬剤師Botのポストバックイベント処理"""
     print(f"[DEBUG] handle_pharmacist_postback called with data: {event.postback.data}")
+    
+    postback_data = event.postback.data
+    
     try:
+        if postback_data.startswith("pharmacist_apply:"):
+            handle_pharmacist_apply(event, postback_data)
+        elif postback_data.startswith("pharmacist_decline:"):
+            handle_pharmacist_decline(event, postback_data)
+        elif postback_data.startswith("pharmacist_details:"):
+            handle_pharmacist_details(event, postback_data)
+        else:
             pharmacist_line_bot_service.reply_message(
                 event.reply_token,
-            TextSendMessage(text="このボタンは現在ご利用いただけません。最新のBotからの通知をご利用ください。")
+                TextSendMessage(text="このボタンは現在ご利用いただけません。最新のBotからの通知をご利用ください。")
             )
     except Exception as e:
         print(f"[DEBUG] Error in handle_pharmacist_postback: {e}")
@@ -322,41 +315,16 @@ def handle_pharmacist_details(event, postback_data: str):
         print(f"[DEBUG] handle_pharmacist_details: user_id={user_id}, request_id={request_id}")
         logger.info(f"Pharmacist details button clicked: user_id={user_id}, request_id={request_id}")
         
-        # 依頼内容を取得
-        request_data = request_manager.get_request(request_id)
-        
-        if request_data:
-            # 詳細情報を表示
-            date = request_data.get('date')
-            if date:
-                if hasattr(date, 'strftime'):
-                    date_str = date.strftime('%Y/%m/%d')
-                else:
-                    from datetime import datetime
-                    date_str = str(date)
-            else:
-                date_str = '不明'
-            details_text = f"📋 勤務依頼の詳細\n\n"
-            details_text += f"🏪 店舗: {request_data.get('store', '不明')}\n"
-            details_text += f"📅 日付: {date_str}\n"
-            details_text += f"⏰ 開始時間: {request_data.get('start_time_label', '不明')}\n"
-            details_text += f"⏰ 終了時間: {request_data.get('end_time_label', '不明')}\n"
-            details_text += f"☕ 休憩時間: {request_data.get('break_time_label', '不明')}\n"
-            details_text += f"👥 必要人数: {request_data.get('count_text', '不明')}\n\n"
-            details_text += f"依頼ID: {request_id}"
-            
-            response = TextSendMessage(text=details_text)
-        else:
-            # 依頼が見つからない場合
-            response = TextSendMessage(
-                text=f"❌ 依頼詳細の取得に失敗しました\n\n"
-                     f"依頼ID: {request_id}\n"
-                     f"依頼内容が見つかりませんでした。\n"
-                     f"店舗にお問い合わせください。"
-            )
+        # 詳細確認メッセージを送信
+        response = TextSendMessage(
+            text=f"📋 依頼詳細\n"
+                 f"依頼ID: {request_id}\n\n"
+                 f"詳細情報を確認中です...\n"
+                 f"少々お待ちください。"
+        )
         
         pharmacist_line_bot_service.reply_message(event.reply_token, response)
-        logger.info(f"Details sent to pharmacist: {user_id}")
+        logger.info(f"Details confirmation sent to pharmacist: {user_id}")
         
     except Exception as e:
         print(f"[DEBUG] handle_pharmacist_details: Exception occurred: {e}")
