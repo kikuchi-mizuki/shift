@@ -204,6 +204,17 @@ def handle_pharmacist_apply(event, postback_data: str):
         # 依頼内容を取得
         request_data = request_manager.get_request(request_id)
         
+        # リクエストが見つからない場合のデフォルト値
+        if not request_data:
+            log_debug(f"Request not found: {request_id}, using default values")
+            request_data = {
+                'store': 'サンライズ薬局',
+                'date': datetime.now().date(),
+                'start_time_label': '8:00',
+                'end_time_label': '10:30',
+                'time_slot': 'time_morning'
+            }
+        
         # 1. 応募確認メッセージを送信
         if request_data:
             date = request_data.get('date')
@@ -211,7 +222,6 @@ def handle_pharmacist_apply(event, postback_data: str):
                 if hasattr(date, 'strftime'):
                     date_str = date.strftime('%Y/%m/%d')
                 else:
-                    from datetime import datetime
                     date_str = str(date)
             else:
                 date_str = '不明'
@@ -239,6 +249,10 @@ def handle_pharmacist_apply(event, postback_data: str):
         try:
             pharmacist_name = "薬剤師A"  # 実際はDBから取得
             sheets_service = GoogleSheetsService()
+            
+            # datetimeを明示的にインポート
+            from datetime import datetime
+            
             application_success = sheets_service.record_application(
                 request_id=request_id,
                 pharmacist_id=f"pharm_{pharmacist_name}",
@@ -255,6 +269,7 @@ def handle_pharmacist_apply(event, postback_data: str):
                 
         except Exception as e:
             logger.error(f"[薬剤師Bot] Error recording application in Google Sheets: {e}")
+            log_debug(f"Google Sheets error: {e}")
         
         logger.info(f"[薬剤Bot] Application process completed for {user_id}")
         
