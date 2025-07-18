@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Request, HTTPException
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, PostbackEvent
 import os
 import logging
 import re
 from datetime import datetime
 
 from shared.services.google_sheets_service import GoogleSheetsService
+from shared.services.request_manager import RequestManager
 
 # 統合設定から薬剤師Bot用の設定を取得
 pharmacist_channel_access_token = os.getenv('PHARMACIST_LINE_CHANNEL_ACCESS_TOKEN')
@@ -28,6 +29,7 @@ pharmacist_handler = WebhookHandler(pharmacist_channel_secret)
 router = APIRouter(prefix="/pharmacist/line", tags=["pharmacist_line"])
 
 logger = logging.getLogger(__name__)
+request_manager = RequestManager()
 
 def log_debug(message):
     """デバッグログをファイルに書き込む"""
@@ -149,6 +151,204 @@ def handle_pharmacist_message(event):
     response = TextSendMessage(text=guide_text)
     pharmacist_line_bot_api.reply_message(event.reply_token, response)
     log_debug(f"Guide message sent successfully to user_id={user_id}")
+
+@pharmacist_handler.add(PostbackEvent)
+def handle_pharmacist_postback(event):
+    """薬剤師Botのポストバックイベント処理（ボタンクリックなど）"""
+    try:
+        user_id = event.source.user_id
+        postback_data = event.postback.data
+        
+        log_debug(f"Pharmacist postback received: user_id={user_id}, postback_data='{postback_data}'")
+        logger.info(f"[薬剤師Bot] Postback from {user_id}: {postback_data}")
+        
+        # 応募ボタンの処理
+        if postback_data.startswith("pharmacist_apply:"):
+            log_debug(f"Calling handle_pharmacist_apply with data: {postback_data}")
+            handle_pharmacist_apply(event, postback_data)
+            return
+            
+        # 辞退ボタンの処理
+        elif postback_data.startswith("pharmacist_decline:"):
+            log_debug(f"Calling handle_pharmacist_decline with data: {postback_data}")
+            handle_pharmacist_decline(event, postback_data)
+            return
+            
+        # 詳細確認ボタンの処理
+        elif postback_data.startswith("pharmacist_details:"):
+            log_debug(f"Calling handle_pharmacist_details with data: {postback_data}")
+            handle_pharmacist_details(event, postback_data)
+            return
+            
+        else:
+            logger.warning(f"[薬剤師Bot] Unknown postback data: {postback_data}")
+            response = TextSendMessage(text="不明なボタン操作です。")
+            pharmacist_line_bot_api.reply_message(event.reply_token, response)
+            
+    except Exception as e:
+        log_debug(f"Error in handle_pharmacist_postback: {e}")
+        logger.error(f"[薬剤師Bot] Error handling postback: {e}")
+        error_response = TextSendMessage(text="ボタン処理中にエラーが発生しました。")
+        pharmacist_line_bot_api.reply_message(event.reply_token, error_response)
+
+def handle_pharmacist_apply(event, postback_data: str):
+    """薬剤師の応募処理"""
+    log_debug(f"handle_pharmacist_apply called with postback_data: {postback_data}")
+    try:
+        user_id = event.source.user_id
+        request_id = postback_data.split(":", 1)[1] if ":" in postback_data else ""
+        
+        log_debug(f"handle_pharmacist_apply: user_id={user_id}, request_id={request_id}")
+        logger.info(f"[薬剤師Bot] Pharmacist apply button clicked: user_id={user_id}, request_id={request_id}")
+        
+        # 依頼内容を取得
+        request_data = request_manager.get_request(request_id)
+        
+        # 1. 応募確認メッセージを送信
+        if request_data:
+            date = request_data.get('date')
+            if date:
+                if hasattr(date, 'strftime'):
+                    date_str = date.strftime('%Y/%m/%d')
+                else:
+                    from datetime import datetime
+                    date_str = str(date)
+            else:
+                date_str = '不明'
+            response_text = f"✅ 応募を受け付けました！\n\n"
+            response_text += f"🏪 店舗: {request_data.get('store', '不明')}\n"
+            response_text += f"📅 日付: {date_str}\n"
+            response_text += f"⏰ 時間: {request_data.get('start_time_label', '不明')}〜{request_data.get('end_time_label', '不明')}\n\n"
+            response_text += f"店舗からの確定連絡をお待ちください。\n"
+            response_text += f"確定次第、詳細をお知らせいたします。"
+        else:
+            response_text = f"✅ 応募を受け付けました！\n"
+            response_text += f"依頼ID: {request_id}\n\n"
+            response_text += f"店舗からの確定連絡をお待ちください。\n"
+            response_text += f"確定次第、詳細をお知らせいたします。"
+        
+        response = TextSendMessage(text=response_text)
+        pharmacist_line_bot_api.reply_message(event.reply_token, response)
+        logger.info(f"[薬剤師Bot] Application confirmation sent to {user_id}")
+        
+        # 2. 応募者リストに追加
+        request_manager.add_applicant(request_id, user_id)
+        logger.info(f"[薬剤師Bot] Added {user_id} to applicants for request {request_id}")
+        
+        # 3. Google Sheetsに応募記録を保存
+        try:
+            pharmacist_name = "薬剤師A"  # 実際はDBから取得
+            sheets_service = GoogleSheetsService()
+            application_success = sheets_service.record_application(
+                request_id=request_id,
+                pharmacist_id=f"pharm_{pharmacist_name}",
+                pharmacist_name=pharmacist_name,
+                store_name=request_data.get('store', 'メイプル薬局') if request_data else "メイプル薬局",
+                date=request_data.get('date', datetime.now().date()) if request_data else datetime.now().date(),
+                time_slot=request_data.get('time_slot', 'time_morning') if request_data else "time_morning"
+            )
+            
+            if application_success:
+                logger.info(f"[薬剤師Bot] Application recorded in Google Sheets for {pharmacist_name}")
+            else:
+                logger.warning(f"[薬剤師Bot] Failed to record application in Google Sheets for {pharmacist_name}")
+                
+        except Exception as e:
+            logger.error(f"[薬剤師Bot] Error recording application in Google Sheets: {e}")
+        
+        logger.info(f"[薬剤Bot] Application process completed for {user_id}")
+        
+    except Exception as e:
+        log_debug(f"handle_pharmacist_apply: Exception occurred: {e}")
+        logger.error(f"[薬剤師Bot] Error handling pharmacist apply: {e}")
+        pharmacist_line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="応募処理中にエラーが発生しました。")
+        )
+
+def handle_pharmacist_decline(event, postback_data: str):
+    """薬剤師の辞退処理"""
+    log_debug(f"handle_pharmacist_decline called with postback_data: {postback_data}")
+    try:
+        user_id = event.source.user_id
+        request_id = postback_data.split(":", 1)[1] if ":" in postback_data else ""
+        
+        log_debug(f"handle_pharmacist_decline: user_id={user_id}, request_id={request_id}")
+        logger.info(f"[薬剤師Bot] Pharmacist decline button clicked: user_id={user_id}, request_id={request_id}")
+        
+        # 辞退確認メッセージを送信
+        response = TextSendMessage(
+            text=f"❌ 辞退を受け付けました。\n"
+                 f"依頼ID: {request_id}\n\n"
+                 f"ご連絡ありがとうございました。\n"
+                 f"またの機会をお待ちしております。"
+        )
+        
+        pharmacist_line_bot_api.reply_message(event.reply_token, response)
+        logger.info(f"[薬剤師Bot] Decline confirmation sent to pharmacist: {user_id}")
+        
+    except Exception as e:
+        log_debug(f"handle_pharmacist_decline: Exception occurred: {e}")
+        logger.error(f"[薬剤師Bot] Error handling pharmacist decline: {e}")
+        pharmacist_line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="辞退処理中にエラーが発生しました。")
+        )
+
+def handle_pharmacist_details(event, postback_data: str):
+    """薬剤師の詳細確認処理"""
+    log_debug(f"handle_pharmacist_details called with postback_data: {postback_data}")
+    try:
+        user_id = event.source.user_id
+        request_id = postback_data.split(":", 1)[1] if ":" in postback_data else ""
+        
+        log_debug(f"handle_pharmacist_details: user_id={user_id}, request_id={request_id}")
+        logger.info(f"[薬剤師Bot] Pharmacist details button clicked: user_id={user_id}, request_id={request_id}")
+        
+        # 依頼内容を取得
+        request_data = request_manager.get_request(request_id)
+        
+        if request_data:
+            # 詳細情報を作成
+            date = request_data.get('date')
+            if date:
+                if hasattr(date, 'strftime'):
+                    date_str = date.strftime('%Y/%m/%d')
+                else:
+                    date_str = str(date)
+            else:
+                date_str = '不明'
+                
+            details_text = f"📋 勤務依頼の詳細\n"
+            details_text += f"━━━━━━━━━━━━━━━━\n"
+            details_text += f"🏪 店舗: {request_data.get('store', '不明')}\n"
+            details_text += f"📅 日付: {date_str}\n"
+            details_text += f"⏰ 開始時間: {request_data.get('start_time_label', '不明')}\n"
+            details_text += f"⏰ 終了時間: {request_data.get('end_time_label', '不明')}\n"
+            details_text += f"☕ 休憩時間: {request_data.get('break_time_label', '不明')}\n"
+            details_text += f"👥 必要人数: {request_data.get('count_text', '不明')}\n"
+            details_text += f"━━━━━━━━━━━━━━━━\n"
+            details_text += f"この依頼に応募しますか？"
+            
+            response = TextSendMessage(text=details_text)
+        else:
+            response = TextSendMessage(
+                text=f"📋 依頼詳細\n"
+                     f"依頼ID: {request_id}\n\n"
+                     f"詳細情報を確認中です...\n"
+                     f"少々お待ちください。"
+            )
+        
+        pharmacist_line_bot_api.reply_message(event.reply_token, response)
+        logger.info(f"[薬剤師Bot] Details confirmation sent to pharmacist: {user_id}")
+        
+    except Exception as e:
+        log_debug(f"handle_pharmacist_details: Exception occurred: {e}")
+        logger.error(f"[薬剤師Bot] Error handling pharmacist details: {e}")
+        pharmacist_line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="詳細確認処理中にエラーが発生しました。")
+        )
 
 @router.post("/webhook")
 async def pharmacist_line_webhook(request: Request):
