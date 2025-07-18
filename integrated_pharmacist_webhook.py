@@ -268,6 +268,44 @@ def handle_pharmacist_apply(event, postback_data: str):
             logger.error(f"[薬剤師Bot] Error recording application in Google Sheets: {e}")
             log_debug(f"Google Sheets error: {e}")
         
+        # 4. 店舗Botに確定通知を送信
+        try:
+            from linebot import LineBotApi
+            from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction
+            
+            # 店舗Bot用のLINE API（環境変数から取得）
+            store_channel_access_token = os.getenv('STORE_LINE_CHANNEL_ACCESS_TOKEN')
+            if not store_channel_access_token:
+                logger.warning("[薬剤師Bot] STORE_LINE_CHANNEL_ACCESS_TOKEN not set, skipping store notification")
+            else:
+                store_line_bot_api = LineBotApi(store_channel_access_token)
+                
+                # 店舗のuser_id（実際はDBから取得）
+                store_user_id = "U37da00c3f064eb4acc037aa8ec6ea79e"  # サンライズ薬局のuser_id
+                
+                # 薬剤師名を取得（実際はDBから取得）
+                pharmacist_name = "田中薬剤師"  # 仮の名前
+                
+                store_notification = TemplateSendMessage(
+                    alt_text="薬剤師が応募しました！",
+                    template=ButtonsTemplate(
+                        title="🎉 薬剤師が応募しました！",
+                        text=f"薬剤師: {pharmacist_name}\n応募日時: {datetime.now().strftime('%Y/%m/%d %H:%M')}",
+                        actions=[
+                            PostbackAction(label="✅ 承諾", data=f"pharmacist_confirm_accept:{request_id}:{user_id}"),
+                            PostbackAction(label="❌ 拒否", data=f"pharmacist_confirm_reject:{request_id}:{user_id}")
+                        ]
+                    )
+                )
+                
+                store_line_bot_api.push_message(store_user_id, store_notification)
+                logger.info(f"[薬剤師Bot] Store notification sent to: {store_user_id}")
+                log_debug(f"[薬剤師Bot] Store notification sent to: {store_user_id}")
+                
+        except Exception as e:
+            logger.error(f"[薬剤師Bot] Error sending store notification: {e}")
+            log_debug(f"[薬剤師Bot] Error sending store notification: {e}")
+        
         logger.info(f"[薬剤Bot] Application process completed for {user_id}")
         
     except Exception as e:
