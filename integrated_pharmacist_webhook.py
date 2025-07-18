@@ -250,9 +250,6 @@ def handle_pharmacist_apply(event, postback_data: str):
             pharmacist_name = "薬剤師A"  # 実際はDBから取得
             sheets_service = GoogleSheetsService()
             
-            # datetimeを明示的にインポート
-            from datetime import datetime
-            
             application_success = sheets_service.record_application(
                 request_id=request_id,
                 pharmacist_id=f"pharm_{pharmacist_name}",
