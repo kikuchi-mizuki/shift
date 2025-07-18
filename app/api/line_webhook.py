@@ -254,10 +254,13 @@ def handle_text_message(event):
                     )
                     print(f"[DEBUG] Sending registration help to user_id={user_id}")
                     line_bot_service.line_bot_api.reply_message(event.reply_token, help_message)
-            return
+                    return
+                
+                # 情報を抽出
                 name = parts[1]
                 phone = parts[2]
                 availability = parts[3:]
+                
                 # ユーザープロフィールを取得
                 profile = line_bot_service.line_bot_api.get_profile(user_id)
                 
@@ -293,13 +296,12 @@ def handle_text_message(event):
                     line_bot_service.line_bot_api.push_message(user_id, confirmation_message)
                     # 追加: 登録済みユーザー案内をpush_messageで送信
                     line_bot_service.line_bot_api.push_message(user_id, TextSendMessage(text="シフト依頼があったら、今後はBotから通知が届きます！"))
-            else:
+                else:
                     confirmation_message = TextSendMessage(
                         text="❌ 登録処理中にエラーが発生しました。\n"
                              "しばらく時間をおいて再度お試しください。"
                     )
-                
-                line_bot_service.line_bot_api.reply_message(event.reply_token, confirmation_message)
+                    line_bot_service.line_bot_api.reply_message(event.reply_token, confirmation_message)
                 
                 logger.info(f"Pharmacist registration completed for {name} ({user_id})")
                 return
@@ -1479,7 +1481,7 @@ def handle_pharmacist_registration(event, message_text: str):
         # 情報を抽出
         name = parts[1]
         phone = parts[2]
-        availability = parts[3].split(",")
+        availability = parts[3:]
         
         # ユーザープロフィールを取得
         profile = line_bot_service.line_bot_api.get_profile(user_id)
@@ -1510,6 +1512,7 @@ def handle_pharmacist_registration(event, message_text: str):
                      f"これで勤務依頼の通知を受け取ることができます。\n"
                      f"「勤務依頼」と入力してテストしてみてください。"
             )
+            print(f"[DEBUG] Sending pharmacist registration success to user_id={user_id}")
             line_bot_service.line_bot_api.reply_message(event.reply_token, confirmation_message)
             # push_messageでも必ず通知
             line_bot_service.line_bot_api.push_message(user_id, confirmation_message)
@@ -1520,11 +1523,10 @@ def handle_pharmacist_registration(event, message_text: str):
                 text="❌ 登録処理中にエラーが発生しました。\n"
                      "しばらく時間をおいて再度お試しください。"
             )
-        
-        line_bot_service.line_bot_api.reply_message(event.reply_token, confirmation_message)
+            line_bot_service.line_bot_api.reply_message(event.reply_token, confirmation_message)
         
         logger.info(f"Pharmacist registration completed for {name} ({user_id})")
-        
+        return
     except Exception as e:
         logger.error(f"Error in pharmacist registration: {e}")
         error_message = TextSendMessage(
